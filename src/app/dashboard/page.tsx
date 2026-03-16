@@ -1,87 +1,62 @@
-// @ts-nocheck
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-    Database,
-    Terminal,
-    Lock,
-    Settings,
     Plus,
-    Network,
-    HardDrive,
-    FolderSync,
+    MessageSquare,
     CheckCircle2,
     ArrowUpRight,
-    MoreVertical,
     Search,
     Clock,
-    LayoutGrid,
-    MessageSquare,
-    ShieldCheck,
     FileText,
     Sparkles,
     ArrowRight,
     Folder,
-    Cloud,
-    FileAudio,
     ChevronRight,
-    Command,
     Cpu,
     Activity,
     Upload,
-    AlertCircle
+    AlertCircle,
+    Database
 } from 'lucide-react';
 
+import { MagneticButton } from '@/components/Shared/MagneticButton';
+import { NavSidebar } from '@/components/Shared/NavSidebar';
+
+// --- TYPES ---
+
+interface KnowledgeSpace {
+    id: string;
+    name: string;
+    files: number;
+    size: string;
+    lastSync: string;
+}
+
+interface Investigation {
+    id: string;
+    title: string;
+    excerpt: string;
+    sources: number;
+    time: string;
+}
+
+interface GraphStats {
+    nodeCount: number;
+    totalNodes?: number;
+    edgeCount: number;
+}
+
 // --- CONFIGURATION & TOKENS ---
-const ACCENT_ORANGE = "text-orange-500";
-const SPRING_CONFIG = { type: "spring", stiffness: 120, damping: 20 };
+const SPRING_CONFIG = { type: "spring", stiffness: 120, damping: 20 } as const;
 
 const SUGGESTED_PROMPTS = [
     "Summarize the latest uploaded document",
     "Find contradictions across my evidence",
     "List all entities in the knowledge graph"
 ];
-
-// --- UTILITY COMPONENTS ---
-
-// Hardware Accelerated Magnetic Button
-const MagneticButton = ({ children, className, onClick, disabled }) => {
-    const x = useMotionValue(0);
-    const y = useMotionValue(0);
-    const springX = useSpring(x, { damping: 15, stiffness: 150 });
-    const springY = useSpring(y, { damping: 15, stiffness: 150 });
-
-    const handleMouseMove = (e) => {
-        if (disabled) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        x.set((e.clientX - centerX) * 0.2);
-        y.set((e.clientY - centerY) * 0.2);
-    };
-
-    const handleMouseLeave = () => {
-        x.set(0);
-        y.set(0);
-    };
-
-    return (
-        <motion.button
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ x: springX, y: springY }}
-            whileTap={disabled ? {} : { scale: 0.95 }}
-            onClick={onClick}
-            disabled={disabled}
-            className={`relative ${className}`}
-        >
-            {children}
-        </motion.button>
-    );
-};
 
 // --- MAIN LAYOUT ---
 
@@ -92,19 +67,19 @@ export default function Dashboard() {
     const [activeScope, setActiveScope] = useState('all');
 
     // --- LIVE DATA STATE ---
-    const [knowledgeSpaces, setKnowledgeSpaces] = useState([]);
-    const [recentInvestigations, setRecentInvestigations] = useState([]);
-    const [graphStats, setGraphStats] = useState(null);
+    const [knowledgeSpaces, setKnowledgeSpaces] = useState<KnowledgeSpace[]>([]);
+    const [recentInvestigations, setRecentInvestigations] = useState<Investigation[]>([]);
+    const [graphStats, setGraphStats] = useState<GraphStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const [isDragging, setIsDragging] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState(null); // null | 'uploading' | 'success' | 'error'
+    const [uploadStatus, setUploadStatus] = useState<'uploading' | 'success' | 'error' | null>(null);
     const [uploadFileName, setUploadFileName] = useState('');
     const [uploadError, setUploadError] = useState('');
     const [targetVaultId, setTargetVaultId] = useState('global');
     const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
     const [newVaultName, setNewVaultName] = useState('');
-    const fileInputRef = useRef(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -127,7 +102,7 @@ export default function Dashboard() {
     }, [fetchDashboardData]);
 
     // --- VAULT HANDLER ---
-    const handleCreateVault = async (e) => {
+    const handleCreateVault = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newVaultName.trim()) return;
         try {
@@ -149,7 +124,7 @@ export default function Dashboard() {
     };
 
     // --- UPLOAD HANDLER ---
-    const handleFileUpload = async (file) => {
+    const handleFileUpload = async (file: File | undefined) => {
         if (!file) return;
         setUploadStatus('uploading');
         setUploadFileName(file.name);
@@ -176,7 +151,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleDrop = (e) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
         const file = e.dataTransfer?.files?.[0];
@@ -214,62 +189,13 @@ export default function Dashboard() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-            {/* LEFT SIDEBAR (Strict Monospace & Status Indicators) */}
-            <aside className="w-[260px] shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col justify-between text-zinc-300 relative z-20 shadow-[10px_0_30px_-15px_rgba(0,0,0,0.5)] hidden md:flex">
-                <div className="h-14 border-b border-zinc-800/60 flex items-center justify-between px-5">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 shadow-inner">
-                            <Database size={12} className="text-zinc-100" />
-                        </div>
-                        <span className="font-semibold text-[13px] text-zinc-100 tracking-tight truncate">EvidenceOS</span>
-                    </div>
-                </div>
-
-                <div className="flex-1 py-6 px-3 flex flex-col gap-1 overflow-y-auto custom-scrollbar">
-                    <span className="px-3 text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500 mb-2">Workspace</span>
-                    {/* Active Route */}
-                    <Link href="/dashboard" className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-900 text-white font-medium text-sm border border-zinc-800 shadow-sm transition-colors relative overflow-hidden group">
-                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500 rounded-r-full" />
-                        <LayoutGrid size={16} className="shrink-0 text-orange-500" /> <span className="truncate">Home</span>
-                    </Link>
-                    <Link href="/chat" className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 font-medium text-sm transition-colors group">
-                        <div className="flex items-center gap-3 min-w-0"><MessageSquare size={16} className="shrink-0 group-hover:text-zinc-300" /> <span className="truncate">Chats</span></div>
-                    </Link>
-                    <Link href="/dashboard" className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 font-medium text-sm transition-colors group">
-                        <div className="flex items-center gap-3 min-w-0"><HardDrive size={16} className="shrink-0 group-hover:text-zinc-300" /> <span className="truncate">Knowledge Vault</span></div>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 border border-zinc-700 shrink-0 group-hover:bg-zinc-700 group-hover:text-white transition-colors">{graphStats?.nodeCount ?? '—'}</span>
-                    </Link>
-
-                    <span className="px-3 text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-2">System Tools</span>
-                    <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 font-medium text-sm transition-colors group">
-                        <div className="flex items-center gap-3 min-w-0"><Network size={16} className="shrink-0 group-hover:text-zinc-300" /> <span className="truncate">Graph Explorer</span></div>
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 font-medium text-sm transition-colors group">
-                        <Settings size={16} className="shrink-0 group-hover:text-zinc-300" /> <span className="truncate">Settings & Models</span>
-                    </button>
-                </div>
-
-                {/* Minimal Trust Signal */}
-                <div className="p-4 border-t border-zinc-800/60 bg-zinc-950 flex flex-col gap-3 shrink-0">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 shadow-inner">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                            <ShieldCheck size={14} className="text-emerald-500" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[11px] font-bold text-zinc-200 truncate uppercase tracking-wider">Air-Gapped</span>
-                            <span className="text-[10px] font-mono text-zinc-500 truncate">No external API calls</span>
-                        </div>
-                    </div>
-                </div>
-            </aside>
+            <NavSidebar nodeCount={graphStats?.nodeCount} />
 
             {/* MAIN CONTENT AREA */}
             <main className="flex-1 flex flex-col relative min-w-0 overflow-y-auto custom-scrollbar bg-zinc-50/50">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-10" />
-                {/* Subtle dynamic glow */}
                 <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.03),transparent_50%)] pointer-events-none -z-10 blur-3xl" />
 
-                {/* Top Navbar */}
                 <header className="h-14 bg-white/70 backdrop-blur-xl border-b border-zinc-200/60 flex items-center justify-end px-6 lg:px-8 sticky top-0 z-30 shrink-0">
                     <div className="flex items-center gap-4 shrink-0">
                         <button className="flex items-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
@@ -282,14 +208,13 @@ export default function Dashboard() {
                     </div>
                 </header>
 
-                {/* Dashboard Content */}
                 <motion.div
                     className="p-5 md:p-8 lg:p-10 flex flex-col gap-10 max-w-[1200px] mx-auto w-full flex-1"
                     variants={containerVariants}
                     initial="hidden"
                     animate="show"
                 >
-                    {/* --- HERO: The Omnibar (Elevated OS Command Center) --- */}
+                    {/* HERO: The Omnibar */}
                     <motion.div variants={itemVariants} className="flex flex-col items-center text-center mt-2 md:mt-6 mb-2">
                         <h1 className="text-3xl md:text-[2.5rem] font-bold tracking-tighter text-zinc-900 mb-6 text-balance leading-tight">
                             What do you want to investigate?
@@ -312,10 +237,6 @@ export default function Dashboard() {
                                     onKeyDown={(e) => { if (e.key === 'Enter') handleOmnibarSubmit(); }}
                                 />
                                 <div className="flex items-center gap-3 shrink-0 ml-2">
-                                    <span className="hidden sm:flex items-center gap-1 font-mono text-[10px] text-zinc-400">
-                                        <kbd className="px-1.5 py-0.5 border border-zinc-200 rounded bg-zinc-50 shadow-[0_2px_0_rgba(228,228,231,1)]">⌘</kbd>
-                                        <kbd className="px-1.5 py-0.5 border border-zinc-200 rounded bg-zinc-50 shadow-[0_2px_0_rgba(228,228,231,1)]">Enter</kbd>
-                                    </span>
                                     <MagneticButton
                                         disabled={!searchQuery}
                                         onClick={handleOmnibarSubmit}
@@ -326,7 +247,6 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* Context Selection Toolbar */}
                             <div className="bg-zinc-50/80 px-4 py-2.5 flex items-center gap-3 overflow-x-auto no-scrollbar relative z-0">
                                 <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 shrink-0 font-semibold flex items-center gap-1">
                                     <Database size={10} /> Context:
@@ -350,7 +270,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Prompt Chips */}
                         <div className="flex flex-wrap justify-center gap-2 mt-5">
                             {SUGGESTED_PROMPTS.map((prompt, i) => (
                                 <button key={i} className="px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-sm transition-all cursor-pointer">
@@ -360,7 +279,7 @@ export default function Dashboard() {
                         </div>
                     </motion.div>
 
-                    {/* --- ROW 1: Evidence Vault + Upload --- */}
+                    {/* ROW 1: Evidence Vault + Upload */}
                     <motion.div variants={itemVariants} className="flex flex-col gap-5">
                         <div className="flex items-center justify-between">
                             <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Evidence Vault</h2>
@@ -394,7 +313,6 @@ export default function Dashboard() {
                             <input ref={fileInputRef} type="file" className="hidden" accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp,.mp3,.wav,.webm" onChange={(e) => handleFileUpload(e.target.files?.[0])} />
                         </div>
 
-                        {/* Upload Dropzone */}
                         <div
                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                             onDragLeave={() => setIsDragging(false)}
@@ -434,12 +352,11 @@ export default function Dashboard() {
                                     <span className="text-sm font-medium text-zinc-600">
                                         {isDragging ? 'Drop to ingest' : 'Drop files here or click to upload'}
                                     </span>
-                                    <span className="text-[10px] text-zinc-400 font-mono">PDF, TXT, MD, Images, Audio — auto-chunked, embedded & graph-linked</span>
+                                    <span className="text-[10px] text-zinc-400 font-mono">PDF, TXT, MD, Images, Audio — auto-chunked</span>
                                 </>
                             )}
                         </div>
 
-                        {/* Vault Cards */}
                         {knowledgeSpaces.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {knowledgeSpaces.map((space) => (
@@ -467,15 +384,13 @@ export default function Dashboard() {
                             </div>
                         ) : !isLoading && (
                             <div className="text-center py-6 text-sm text-zinc-400">
-                                No evidence ingested yet. Upload a file above to create your first knowledge vault.
+                                No evidence ingested yet.
                             </div>
                         )}
                     </motion.div>
 
-                    {/* --- ROW 2: Activity & Trust --- */}
+                    {/* ROW 2: Activity & Trust */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-
-                        {/* Recent Investigations (Col 2/3) */}
                         <motion.div variants={itemVariants} className="lg:col-span-2 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Recent Investigations</h2>
@@ -507,49 +422,35 @@ export default function Dashboard() {
                                 )) : (
                                     <div className="p-8 text-center">
                                         <p className="text-sm text-zinc-400 mb-2">No investigations yet</p>
-                                        <p className="text-xs text-zinc-400">Your investigation history will appear here after you use the <Link href="/chat" className="text-orange-500 hover:underline">chat agent</Link>.</p>
                                     </div>
                                 )}
                             </div>
                         </motion.div>
 
-                        {/* System Trust & Telemetry (Col 1/3) */}
                         <motion.div variants={itemVariants} className="lg:col-span-1 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">System Integrity</h2>
                             </div>
 
                             <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)] p-5 flex flex-col gap-6 relative overflow-hidden h-full group">
-                                {/* Dynamic "Alive" Enclave Background */}
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#09090b_100%),repeating-radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0,rgba(255,255,255,0.03)_1px,transparent_1px,transparent_20px)] pointer-events-none" />
-
-                                {/* Scanning Laser Animation */}
-                                <motion.div
-                                    className="absolute left-0 right-0 h-[1px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.5)] z-0"
-                                    animate={{ top: ['0%', '100%', '0%'] }}
-                                    transition={{ duration: 6, ease: "linear", repeat: Infinity }}
-                                />
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#09090b_100%)] pointer-events-none" />
 
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">
-                                            <ShieldCheck size={20} className="text-emerald-500" />
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <CheckCircle2 size={20} className="text-emerald-500" />
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-bold text-white tracking-tight">Zero-Trust Active</h3>
                                             <p className="text-[10px] font-mono text-zinc-400 mt-0.5">Daemon running locally.</p>
                                         </div>
                                     </div>
-                                    <span className="flex h-2 w-2 relative mt-1">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                    </span>
                                 </div>
 
                                 <div className="relative z-10 flex flex-col gap-1 flex-1 justify-center bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/80">
                                     <div className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
                                         <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-2"><Network size={12} /> Graph Nodes</span>
-                                        <span className="text-[11px] font-mono font-semibold text-zinc-200">{graphStats?.totalNodes ?? '—'}</span>
+                                        <span className="text-[11px] font-mono font-semibold text-zinc-200">{graphStats?.totalNodes ?? graphStats?.nodeCount ?? '—'}</span>
                                     </div>
                                     <div className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
                                         <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-2"><Activity size={12} /> Graph Edges</span>
@@ -566,12 +467,11 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         </motion.div>
-
                     </div>
                 </motion.div>
             </main>
 
-            {/* --- CREATE VAULT MODAL --- */}
+            {/* CREATE VAULT MODAL */}
             <AnimatePresence>
                 {isCreateVaultModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm">
@@ -582,30 +482,27 @@ export default function Dashboard() {
                             className="bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 w-[400px] max-w-[90vw] flex flex-col gap-4"
                         >
                             <h3 className="text-lg font-bold text-zinc-900">Create New Vault</h3>
-                            <p className="text-xs text-zinc-500 text-balance">
-                                Vaults isolate your documents. When querying the chat agent, you can constrain it to exclusively search within a specific vault.
-                            </p>
                             <form onSubmit={handleCreateVault} className="flex flex-col gap-4 mt-2">
                                 <input
                                     type="text"
-                                    placeholder="Vault Name (e.g. 'Client Acme Meetings')"
+                                    placeholder="Vault Name"
                                     value={newVaultName}
                                     onChange={(e) => setNewVaultName(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none text-sm transition-all"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 outline-none text-sm transition-all"
                                     autoFocus
                                 />
                                 <div className="flex items-center justify-end gap-3 mt-2">
                                     <button
                                         type="button"
                                         onClick={() => setIsCreateVaultModalOpen(false)}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-500 hover:bg-zinc-100 transition-colors"
+                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-500 hover:bg-zinc-100"
                                     >
                                         Cancel
                                     </button>
                                     <MagneticButton
                                         type="submit"
                                         disabled={!newVaultName.trim()}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-zinc-900 disabled:opacity-50"
                                     >
                                         Create Vault
                                     </MagneticButton>
@@ -615,11 +512,6 @@ export default function Dashboard() {
                     </div>
                 )}
             </AnimatePresence>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        .animate-spin-slow { animation: spin 3s linear infinite; }
-      `}} />
         </div>
     );
 }

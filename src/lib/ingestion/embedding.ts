@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
-const EMBEDDING_MODEL = "gemini-embedding-2-preview";
-const EMBEDDING_DIMENSIONS = 768; // MRL: reduced from 3072 for efficiency
+const EMBEDDING_MODEL = "text-embedding-004";
+const EMBEDDING_DIMENSIONS = 768;
 
 let genai: GoogleGenAI | null = null;
 

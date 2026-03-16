@@ -32,7 +32,7 @@ export interface IngestResult {
 }
 
 /**
- * Generate metadata for a document using Gemini 3 Flash
+ * Generate metadata for a document using Gemini 1.5 Flash
  */
 async function generateMetadata(
   contentPreview: string,
@@ -45,9 +45,13 @@ async function generateMetadata(
     if (!apiKey) throw new Error("No API key");
 
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Analyze the following content and return a JSON object with these fields:
+    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+    
+    const result = await model.generateContent({
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `Analyze the following content and return a JSON object with these fields:
 - "summary": a one-line description (max 100 chars)
 - "tags": array of 3-5 topic tags (lowercase, no spaces, use hyphens)
 - "contentType": one of: meeting, report, study-notes, business, personal, technical, legal, medical, creative, general
@@ -58,10 +62,13 @@ MIME Type: ${mimeType}
 Content preview:
 ${contentPreview.substring(0, 2000)}
 
-Return ONLY the JSON object, no markdown fencing.`,
+Return ONLY the JSON object, no markdown fencing.`
+        }]
+      }],
     });
 
-    const text = response.text?.trim() || "";
+    const response = await result.response;
+    const text = response.text()?.trim() || "";
     // Clean potential markdown fencing
     const cleaned = text.replace(/^```json?\n?/i, "").replace(/\n?```$/i, "").trim();
     const parsed = JSON.parse(cleaned);
@@ -71,7 +78,8 @@ Return ONLY the JSON object, no markdown fencing.`,
       contentType: parsed.contentType || "general",
       entities: Array.isArray(parsed.entities) ? parsed.entities : [],
     };
-  } catch {
+  } catch (error) {
+    console.error("Metadata generation failed:", error);
     // Fallback if metadata generation fails
     return {
       summary: filename,
@@ -87,7 +95,7 @@ Return ONLY the JSON object, no markdown fencing.`,
  * 1. Save file to disk
  * 2. Chunk content
  * 3. Generate metadata with AI
- * 4. Embed each chunk
+ * 4. Embed each chunk (PARALLEL)
  * 5. Store vectors + metadata
  */
 export async function ingestFile(
@@ -131,53 +139,64 @@ export async function ingestFile(
         : fileBuffer;
     const chunks = chunkContent(contentForChunking, mimeType, originalName);
 
+    if (chunks.length === 0) {
+        throw new Error("No content could be extracted from this file.");
+    }
+
     // 4. Generate AI metadata from first chunk preview
     onProgress?.("Generating metadata with AI...");
     const previewText = chunks[0]?.preview || originalName;
     const metadata = await generateMetadata(previewText, originalName, mimeType);
 
-    // 5. Embed each chunk and store
-    onProgress?.(`Embedding ${chunks.length} chunk(s)...`);
+    // 5. Embed chunks in parallel batches
+    onProgress?.(`Embedding ${chunks.length} chunk(s) in parallel...`);
+    
+    // Batch size for concurrency control
+    const BATCH_SIZE = 5;
     const vectorDocs = [];
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const chunkId = `${documentId}_chunk_${i}`;
-
-      onProgress?.(`Embedding chunk ${i + 1}/${chunks.length}...`);
-
-      // Embed the chunk
-      const embedding = await embedContent(chunk.content, chunk.mimeType);
-
-      // Store chunk record in SQLite
-      insertChunk({
-        id: chunkId,
-        documentId,
-        chunkIndex: i,
-        contentPreview: chunk.preview,
-        mimeType: chunk.mimeType,
-        metadata: {
-          tags: metadata.tags,
-          contentType: metadata.contentType,
-        },
-      });
-
-      // Prepare vector for ChromaDB
-      vectorDocs.push({
-        id: chunkId,
-        embedding: embedding.values,
-        metadata: {
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE);
+      onProgress?.(`Embedding chunk batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)}...`);
+      
+      const batchResults = await Promise.all(batch.map(async (chunk, batchIdx) => {
+        const index = i + batchIdx;
+        const chunkId = `${documentId}_chunk_${index}`;
+        
+        // Embed the chunk
+        const embedding = await embedContent(chunk.content, chunk.mimeType);
+        
+        // Store chunk record in SQLite
+        insertChunk({
+          id: chunkId,
           documentId,
-          chunkIndex: i,
-          filename: originalName,
+          chunkIndex: index,
+          contentPreview: chunk.preview,
           mimeType: chunk.mimeType,
-          contentType: metadata.contentType,
-          tags: metadata.tags.join(","),
-          preview: chunk.preview.substring(0, 500),
-          vaultId: vaultId || "",
-        },
-        document: chunk.preview,
-      });
+          metadata: {
+            tags: metadata.tags,
+            contentType: metadata.contentType,
+          },
+        });
+
+        return {
+          id: chunkId,
+          embedding: embedding.values,
+          metadata: {
+            documentId,
+            chunkIndex: index,
+            filename: originalName,
+            mimeType: chunk.mimeType,
+            contentType: metadata.contentType,
+            tags: metadata.tags.join(","),
+            preview: chunk.preview.substring(0, 500),
+            vaultId: vaultId || "",
+          },
+          document: chunk.preview,
+        };
+      }));
+
+      vectorDocs.push(...batchResults);
     }
 
     // 6. Batch add vectors to ChromaDB
@@ -224,6 +243,7 @@ export async function ingestFile(
       },
     };
   } catch (error) {
+    console.error("Ingestion failed:", error);
     // Update document status to error
     try {
       updateDocument(documentId, { status: "error" });

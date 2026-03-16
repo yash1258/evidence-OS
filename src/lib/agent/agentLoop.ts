@@ -102,7 +102,8 @@ export async function runAgentLoop(
   userMessage: string,
   chatHistory: LLMMessage[] = [],
   vaultId?: string,
-  onStep?: (step: ThinkingStep) => void
+  onStep?: (step: ThinkingStep) => void,
+  onToken?: (token: string) => void
 ): Promise<AgentResult> {
   const thinkingSteps: ThinkingStep[] = [];
   const sourcesSet = new Set<string>();
@@ -121,8 +122,11 @@ export async function runAgentLoop(
     // Call LLM with tools
     let response: LLMResponse;
     try {
+      // Use onToken only if we think this might be the final response
+      // But we can't be sure, so we pass it always. 
+      // If it's a function call, Gemini usually doesn't stream text.
       response = await withFallback((provider) =>
-        provider.generateContent(messages, SYSTEM_PROMPT, AGENT_TOOLS)
+        provider.generateContent(messages, SYSTEM_PROMPT, AGENT_TOOLS, onToken)
       );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";

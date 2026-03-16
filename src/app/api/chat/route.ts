@@ -62,6 +62,14 @@ export async function POST(request: NextRequest) {
                 step,
               });
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            },
+            (token) => {
+              // Stream text tokens as SSE
+              const data = JSON.stringify({
+                type: "text",
+                token,
+              });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             }
           );
 

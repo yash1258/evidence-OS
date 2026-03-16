@@ -161,11 +161,10 @@ export function buildEntityEdges(
       metadata: {},
     });
 
-    // Find other documents that also mention this entity
-    // and create cross-document co_mentions edges
-    const existingDocs = getNodesByType("document").concat(
-      getNodesByType("audio"),
-      getNodesByType("image")
+    // Find other documents that also mention this entity (STRICTLY WITHIN SAME VAULT)
+    const existingDocs = getNodesByType("document", vaultId).concat(
+      getNodesByType("audio", vaultId),
+      getNodesByType("image", vaultId)
     );
     for (const existingDoc of existingDocs) {
       if (existingDoc.id === documentId) continue;
@@ -184,7 +183,7 @@ export function buildEntityEdges(
           confidence: 0.9,
           evidence: `Both documents mention "${entityName}"`,
           method: "semantic",
-          metadata: { sharedEntity: entityName },
+          metadata: { sharedEntity: entityName, vaultId },
         });
       }
     }
@@ -203,6 +202,7 @@ export async function buildSemanticEdges(
   newChunkIds: string[],
   chunkPreviews: string[],
   documentId: string,
+  vaultId?: string,
   threshold: number = 0.85
 ): Promise<number> {
   let edgesCreated = 0;
@@ -215,9 +215,10 @@ export async function buildSemanticEdges(
       // Embed the chunk preview as a query
       const embedding = await embedText(preview.substring(0, 500), "RETRIEVAL_QUERY");
 
-      // Query ChromaDB for similar chunks, excluding same document
+      // Query ChromaDB for similar chunks, excluding same document, STRICTLY WITHIN VAULT
       const results = await queryVectors(embedding.values, 5, {
         documentId: { $ne: documentId },
+        vaultId: vaultId || "",
       });
 
       for (const result of results) {
@@ -232,7 +233,7 @@ export async function buildSemanticEdges(
             confidence: similarity,
             evidence: `Cosine similarity: ${similarity.toFixed(3)}`,
             method: "semantic",
-            metadata: { similarity: similarity.toFixed(3) },
+            metadata: { similarity: similarity.toFixed(3), vaultId },
           });
           edgesCreated++;
         }
@@ -256,15 +257,16 @@ export async function buildSemanticEdges(
 export async function buildAIEdges(
   documentId: string,
   documentSummary: string,
-  documentName: string
+  documentName: string,
+  vaultId?: string
 ): Promise<{ edgesCreated: number; insights: string[] }> {
   const insights: string[] = [];
   let edgesCreated = 0;
 
-  // Get summaries of existing documents for comparison
-  const existingDocs = getNodesByType("document").concat(
-    getNodesByType("audio"),
-    getNodesByType("image")
+  // Get summaries of existing documents for comparison (STRICTLY WITHIN SAME VAULT)
+  const existingDocs = getNodesByType("document", vaultId).concat(
+    getNodesByType("audio", vaultId),
+    getNodesByType("image", vaultId)
   );
   const otherDocs = existingDocs.filter((d) => d.id !== documentId);
 
@@ -283,7 +285,7 @@ export async function buildAIEdges(
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: `You are a document relationship analyzer. Analyze the NEW document against the EXISTING documents and identify relationships.
 
 NEW DOCUMENT:
@@ -334,7 +336,7 @@ Return ONLY the JSON array, no markdown fencing. Return [] if no relationships f
           confidence: rel.confidence,
           evidence: rel.evidence || "",
           method: "ai_inferred",
-          metadata: { model: "gemini-3-flash-preview" },
+          metadata: { model: "gemini-2.0-flash", vaultId },
         });
         edgesCreated++;
 
@@ -410,7 +412,8 @@ export async function buildGraphForDocument(
   const semanticEdges = await buildSemanticEdges(
     chunkNodeIds,
     chunkPreviews,
-    documentId
+    documentId,
+    vaultId
   );
   totalEdges += semanticEdges;
 
@@ -419,7 +422,8 @@ export async function buildGraphForDocument(
   const { edgesCreated: aiEdges, insights } = await buildAIEdges(
     documentId,
     summary,
-    originalName
+    originalName,
+    vaultId
   );
   totalEdges += aiEdges;
   allInsights.push(...insights);

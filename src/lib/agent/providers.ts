@@ -1,11 +1,11 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 // ---- Provider Interface ----
 
 export interface LLMMessage {
   role: "user" | "model" | "assistant" | "function";
   content?: string;
-  parts?: unknown[];
+  parts?: any[];
   functionCall?: { name: string; args: Record<string, unknown> };
   functionResponse?: { name: string; response: Record<string, unknown> };
 }
@@ -26,7 +26,8 @@ export interface LLMProvider {
   generateContent(
     messages: LLMMessage[],
     systemPrompt: string,
-    tools?: ToolDeclaration[]
+    tools?: ToolDeclaration[],
+    onToken?: (token: string) => void
   ): Promise<LLMResponse>;
 }
 
@@ -36,7 +37,7 @@ export class GeminiProvider implements LLMProvider {
   private ai: GoogleGenAI;
   private model: string;
 
-  constructor(model: string = "gemini-3-flash-preview") {
+  constructor(model: string = "gemini-2.0-flash") {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
     this.ai = new GoogleGenAI({ apiKey });
@@ -46,7 +47,8 @@ export class GeminiProvider implements LLMProvider {
   async generateContent(
     messages: LLMMessage[],
     systemPrompt: string,
-    tools?: ToolDeclaration[]
+    tools?: ToolDeclaration[],
+    onToken?: (token: string) => void
   ): Promise<LLMResponse> {
     const contents = messages.map((msg) => {
       if (msg.functionResponse) {
@@ -58,7 +60,7 @@ export class GeminiProvider implements LLMProvider {
       if (msg.parts) {
         return {
           role: (msg.role === "assistant" ? "model" : msg.role) as "user" | "model",
-          parts: msg.parts as Array<{ text?: string; functionCall?: unknown }>,
+          parts: msg.parts,
         };
       }
       return {
@@ -67,39 +69,73 @@ export class GeminiProvider implements LLMProvider {
       };
     });
 
-    const config: Record<string, unknown> = {
-      systemInstruction: systemPrompt,
-    };
-
-    if (tools && tools.length > 0) {
-      config.tools = [
-        {
-          functionDeclarations: tools.map((t) => ({
-            name: t.name,
-            description: t.description,
-            parameters: t.parameters,
-          })),
-        },
-      ];
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await this.ai.models.generateContent({
-      model: this.model,
-      contents: contents as any,
-      config,
+    const model = this.ai.getGenerativeModel({
+        model: this.model,
+        systemInstruction: systemPrompt,
     });
 
-    return {
-      text: response.text || undefined,
-      functionCalls: response.functionCalls
-        ?.filter((fc) => fc.name)
-        .map((fc) => ({
-          name: fc.name!,
-          args: (fc.args || {}) as Record<string, unknown>,
-        })),
-      raw: response,
+    const generationConfig = {
+        temperature: 0.1,
     };
+
+    const toolConfig = (tools && tools.length > 0) ? {
+        tools: [
+            {
+                functionDeclarations: tools.map((t) => ({
+                    name: t.name,
+                    description: t.description,
+                    parameters: t.parameters,
+                })),
+            },
+        ],
+    } : {};
+
+    if (onToken) {
+        const result = await model.generateContentStream({
+            contents: contents as any,
+            generationConfig,
+            ...toolConfig
+        });
+
+        let fullText = "";
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+                fullText += chunkText;
+                onToken(chunkText);
+            }
+        }
+
+        const response = await result.response;
+        return {
+            text: fullText || undefined,
+            functionCalls: response.functionCalls()
+                ?.filter((fc) => fc.name)
+                .map((fc) => ({
+                    name: fc.name!,
+                    args: (fc.args || {}) as Record<string, unknown>,
+                })),
+            raw: response,
+        };
+    } else {
+        const result = await model.generateContent({
+            contents: contents as any,
+            generationConfig,
+            ...toolConfig
+        });
+
+        const response = result.response;
+        return {
+            text: response.text() || undefined,
+            functionCalls: response.functionCalls()
+                ?.filter((fc) => fc.name)
+                .map((fc) => ({
+                    name: fc.name!,
+                    args: (fc.args || {}) as Record<string, unknown>,
+                })),
+            raw: response,
+        };
+    }
   }
 }
 
@@ -110,7 +146,7 @@ export class OpenRouterProvider implements LLMProvider {
   private model: string;
   private baseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
-  constructor(model: string = "google/gemini-3-flash-preview:free") {
+  constructor(model: string = "google/gemini-2.0-flash-001") {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
     this.apiKey = apiKey;
@@ -120,7 +156,8 @@ export class OpenRouterProvider implements LLMProvider {
   async generateContent(
     messages: LLMMessage[],
     systemPrompt: string,
-    tools?: ToolDeclaration[]
+    tools?: ToolDeclaration[],
+    onToken?: (token: string) => void
   ): Promise<LLMResponse> {
     const openaiMessages: Array<Record<string, unknown>> = [
       { role: "system", content: systemPrompt },
@@ -158,6 +195,7 @@ export class OpenRouterProvider implements LLMProvider {
     const body: Record<string, unknown> = {
       model: this.model,
       messages: openaiMessages,
+      stream: !!onToken,
     };
 
     if (tools && tools.length > 0) {
@@ -185,6 +223,40 @@ export class OpenRouterProvider implements LLMProvider {
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(`OpenRouter error ${res.status}: ${errText}`);
+    }
+
+    if (onToken) {
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+        let functionCalls: any[] = [];
+
+        if (reader) {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split("\n");
+                for (const line of lines) {
+                    if (line.startsWith("data: ")) {
+                        const payload = line.slice(6).trim();
+                        if (payload === "[DONE]") break;
+                        try {
+                            const parsed = JSON.parse(payload);
+                            const delta = parsed.choices[0].delta;
+                            if (delta.content) {
+                                fullText += delta.content;
+                                onToken(delta.content);
+                            }
+                            if (delta.tool_calls) {
+                                functionCalls = delta.tool_calls; 
+                            }
+                        } catch { /* ignore */ }
+                    }
+                }
+            }
+        }
+        return { text: fullText, raw: {}, functionCalls };
     }
 
     const data = await res.json();

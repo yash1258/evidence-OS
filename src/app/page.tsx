@@ -1,17 +1,12 @@
-// @ts-nocheck
 "use client";
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { motion, useMotionValue, useSpring, AnimatePresence, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     Database,
-    FileText,
-    Headphones,
-    Image as ImageIcon,
     Search,
     ShieldCheck,
     ArrowRight,
-    Terminal,
     Cpu,
     CheckCircle2,
     Lock,
@@ -23,219 +18,21 @@ import {
     Scale,
     ShieldAlert,
     BrainCircuit,
-    Code2
+    Code2,
+    FileText,
+    PlayCircle
 } from 'lucide-react';
+
+import { MagneticButton } from '@/components/Shared/MagneticButton';
+import { TextReveal } from '@/components/Shared/TextReveal';
+import { TerminalLoop } from '@/components/Shared/TerminalLoop';
+import { MultimodalGraph } from '@/components/Shared/MultimodalGraph';
+import { GroundingTrace } from '@/components/Shared/GroundingTrace';
 
 // --- CONFIGURATION & TOKENS ---
 const ACCENT_COLOR = "text-orange-500";
 const ACCENT_BG = "bg-zinc-950";
-const ACCENT_LIGHT = "bg-orange-500/10";
 const SPRING_CONFIG = { type: "spring", stiffness: 100, damping: 20 } as const;
-
-// --- UTILITY COMPONENTS ---
-
-// 0. Cinematic Text Reveal (Blur + Y-Axis Stagger)
-const TextReveal = ({ text, delayOffset = 0, className = "" }: { text: string, delayOffset?: number, className?: string }) => {
-    const words = text.split(" ");
-    return (
-        <span className={`inline-flex flex-wrap ${className}`}>
-            {words.map((word, i) => (
-                <motion.span
-                    key={i}
-                    initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{
-                        delay: delayOffset + i * 0.08,
-                        duration: 0.8,
-                        ease: [0.16, 1, 0.3, 1],
-                    }}
-                    className="mr-[0-[0.3em]] mr-3 md:mr-4 last:mr-0"
-                >
-                    {word}
-                </motion.span>
-            ))}
-        </span>
-    );
-};
-
-// 1. Magnetic Button (Motion Engine - Hardware Accelerated)
-const MagneticButton = ({ children, className, onClick }: { children: React.ReactNode, className?: string, onClick?: (e: React.MouseEvent) => void }) => {
-    const x = useMotionValue(0);
-    const y = useMotionValue(0);
-    const springX = useSpring(x, { damping: 15, stiffness: 150 });
-    const springY = useSpring(y, { damping: 15, stiffness: 150 });
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        x.set((e.clientX - centerX) * 0.2);
-        y.set((e.clientY - centerY) * 0.2);
-    };
-
-    const handleMouseLeave = () => {
-        x.set(0);
-        y.set(0);
-    };
-
-    return (
-        <motion.button
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ x: springX, y: springY }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClick}
-            className={`relative ${className}`}
-        >
-            {children}
-        </motion.button>
-    );
-};
-
-// --- PERPETUAL MOTION LEAF COMPONENTS (Isolated to prevent re-renders) ---
-
-// Bento Visual 1: The ReAct Terminal Loop
-const TerminalLoop = memo(() => {
-    const [step, setStep] = useState(0);
-    const steps = [
-        { text: "Query received: 'Risk analysis Q3 vs Audio notes'", type: "input", color: "text-zinc-900" },
-        { text: "Retrieving from Local Vault (ChromaDB)...", type: "system", color: "text-zinc-600" },
-        { text: "Found 3 PDFs, 1 Audio Transcript.", type: "system", color: "text-zinc-600" },
-        { text: "Extracting risk entities...", type: "process", color: "text-orange-500" },
-        { text: "Cross-referencing claims...", type: "process", color: "text-orange-500" },
-        { text: "Synthesizing evidence-backed response.", type: "success", color: "text-emerald-600" }
-    ];
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setStep((prev) => (prev + 1) % steps.length);
-        }, 2500);
-        return () => clearInterval(timer);
-    }, [steps.length]);
-
-    return (
-        <div className="w-full h-full flex flex-col justify-center font-mono text-xs text-zinc-500 p-4 relative">
-            <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-white/80 to-transparent z-10 pointer-events-none" />
-
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-100/50 relative z-20">
-                <div className="flex items-center gap-1.5 mr-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-                </div>
-                <Terminal size={12} className="text-zinc-400 ml-2" />
-                <span className="tracking-wider">agent_trace.log</span>
-            </div>
-            <div className="flex-1 relative overflow-hidden">
-                <AnimatePresence mode="popLayout">
-                    {steps.map((s, i) => (
-                        i <= step && (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, x: -10, filter: "blur(4px)" }}
-                                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                                transition={{ duration: 0.4, ease: "easeOut" }}
-                                className="mb-3 flex items-start gap-3"
-                            >
-                                <span className={`mt-0.5 ${s.type === 'input' ? 'text-zinc-900' : s.color}`}>
-                                    {s.type === 'input' ? '❯' : s.type === 'success' ? '✓' : s.type === 'process' ? '⟳' : '•'}
-                                </span>
-                                <span className={`${s.type === 'input' ? 'text-zinc-800 font-medium' : s.color} leading-relaxed font-medium tracking-tight opacity-90`}>
-                                    {s.text}
-                                </span>
-                            </motion.div>
-                        )
-                    ))}
-                </AnimatePresence>
-            </div>
-        </div>
-    );
-});
-
-// Bento Visual 2: Multimodal Embedding Graph
-const MultimodalGraph = memo(() => {
-    const itemVariants = [
-        { icon: FileText, delay: 0, angle: 0, color: "text-zinc-600", bg: "bg-white border-zinc-200" },
-        { icon: Headphones, delay: 1, angle: 120, color: "text-zinc-600", bg: "bg-white border-zinc-200" },
-        { icon: ImageIcon, delay: 2, angle: 240, color: "text-zinc-600", bg: "bg-white border-zinc-200" }
-    ];
-
-    return (
-        <div className="w-full h-full relative flex items-center justify-center">
-            <motion.div
-                animate={{ boxShadow: ['0px 0px 0px 0px rgba(249, 115, 22, 0)', '0px 0px 30px 5px rgba(249, 115, 22, 0.1)', '0px 0px 0px 0px rgba(249, 115, 22, 0)'] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="w-16 h-16 rounded-2xl bg-zinc-900 z-10 flex items-center justify-center shadow-xl border border-zinc-800 relative"
-            >
-                <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.15),transparent_50%)]" />
-                <Database size={24} className="text-zinc-100 relative z-10" />
-            </motion.div>
-            {itemVariants.map((item, i) => (
-                <motion.div
-                    key={i}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="absolute w-48 h-48 flex items-start justify-center"
-                    style={{ originX: 0.5, originY: 0.5, transform: `rotate(${item.angle}deg)` }}
-                >
-                    <motion.div
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                        className={`w-10 h-10 rounded-full ${item.bg} border shadow-sm flex items-center justify-center backdrop-blur-sm`}
-                    >
-                        {item.icon && React.createElement(item.icon, { size: 20, className: item.color })}
-                    </motion.div>
-                </motion.div>
-            ))}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-                <circle cx="50%" cy="50%" r="96" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="text-zinc-400" />
-                <circle cx="50%" cy="50%" r="64" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" className="text-zinc-300" />
-            </svg>
-        </div>
-    );
-});
-
-// Bento Visual 3: Zero Hallucination Grounding
-const GroundingTrace = memo(() => {
-    return (
-        <div className="w-full h-full flex flex-col justify-center p-6 gap-4">
-            <motion.div
-                initial={{ opacity: 0.5 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-                className="w-full h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center px-4 gap-3 relative overflow-hidden"
-            >
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <div className="h-2 bg-zinc-200 rounded-full w-24" />
-                <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
-                    className="absolute left-0 top-1/2 h-[1px] bg-red-500/50 w-full origin-left"
-                />
-            </motion.div>
-            <motion.div
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1 }}
-                className="w-full rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 relative"
-            >
-                <div className="flex items-center gap-2 mb-2">
-                    <ShieldCheck size={16} className="text-emerald-600" />
-                    <span className="text-xs font-semibold text-emerald-800">Grounded Response</span>
-                </div>
-                <div className="space-y-2">
-                    <div className="h-2 bg-emerald-200/50 rounded-full w-full" />
-                    <div className="h-2 bg-emerald-200/50 rounded-full w-3/4" />
-                </div>
-                <div className="absolute -bottom-3 -right-2 bg-white border border-zinc-200 shadow-sm text-[10px] font-mono px-2 py-1 rounded-md text-zinc-500 flex items-center gap-1">
-                    <FileText size={10} /> source_doc.pdf [Pg 4]
-                </div>
-            </motion.div>
-        </div>
-    );
-});
-
 
 // --- MAIN LAYOUT COMPONENTS ---
 
@@ -382,7 +179,7 @@ const HeroSection = () => {
     );
 };
 
-// --- NEW: THE PROBLEM STATEMENT (Contrast Section) ---
+// --- THE PROBLEM STATEMENT (Contrast Section) ---
 const ComparisonSection = () => {
     return (
         <section id="problem" className="py-24 relative border-t border-zinc-200/60 mt-12">
@@ -465,7 +262,7 @@ const ComparisonSection = () => {
     );
 };
 
-// --- NEW: USE CASES SECTION (Marketing Angles Implementation) ---
+// --- USE CASES SECTION ---
 const USE_CASES = [
     {
         id: 'finance',
@@ -540,7 +337,7 @@ const USE_CASES = [
 ];
 
 const UseCasesSection = () => {
-    const [activeId, setActiveId] = useState(USE_CASES[0].id);
+    const [activeId, setActiveId] = React.useState(USE_CASES[0].id);
     const activeCase = USE_CASES.find(c => c.id === activeId);
 
     return (
@@ -588,58 +385,55 @@ const UseCasesSection = () => {
 
                     {/* Active Content Showcase */}
                     <div className="lg:col-span-8">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeId}
-                                initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-                                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                                exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-                                transition={{ duration: 0.3 }}
-                                className="h-full"
-                            >
-                                <div className="bg-zinc-50 rounded-[2.5rem] border border-zinc-200/60 p-8 md:p-12 h-full flex flex-col relative overflow-hidden">
-                                    {/* Decorative background mesh */}
-                                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+                        <motion.div
+                            key={activeId}
+                            initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                            transition={{ duration: 0.3 }}
+                            className="h-full"
+                        >
+                            <div className="bg-zinc-50 rounded-[2.5rem] border border-zinc-200/60 p-8 md:p-12 h-full flex flex-col relative overflow-hidden">
+                                {/* Decorative background mesh */}
+                                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-                                    <div className="relative z-10 flex-1 flex flex-col justify-between gap-8">
-                                        <div>
-                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-200 shadow-sm text-xs font-semibold text-zinc-600 mb-6 uppercase tracking-wider">
-                                                {activeCase?.icon && React.createElement(activeCase.icon as any, { size: 14, className: "text-orange-500" })} {activeCase?.title} View
-                                            </div>
-                                            <h3 className="text-3xl md:text-4xl font-bold tracking-tighter text-zinc-900 mb-4">
-                                                {activeCase?.hook}
-                                            </h3>
-                                            <p className="text-lg text-zinc-600 leading-relaxed max-w-[90%]">
-                                                {activeCase?.desc}
-                                            </p>
+                                <div className="relative z-10 flex-1 flex flex-col justify-between gap-8">
+                                    <div>
+                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-200 shadow-sm text-xs font-semibold text-zinc-600 mb-6 uppercase tracking-wider">
+                                            {activeCase?.icon && React.createElement(activeCase.icon as any, { size: 14, className: "text-orange-500" })} {activeCase?.title} View
                                         </div>
+                                        <h3 className="text-3xl md:text-4xl font-bold tracking-tighter text-zinc-900 mb-4">
+                                            {activeCase?.hook}
+                                        </h3>
+                                        <p className="text-lg text-zinc-600 leading-relaxed max-w-[90%]">
+                                            {activeCase?.desc}
+                                        </p>
+                                    </div>
 
-                                        {/* Terminal Proof Visual */}
-                                        <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden mt-6">
-                                            <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-2">
-                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-                                                <span className="text-[10px] font-mono text-zinc-500 ml-2 font-medium tracking-wider uppercase">{activeCase?.id}_agent.log</span>
-                                            </div>
-                                            <div className="p-5 font-mono text-xs leading-relaxed flex flex-col gap-2">
-                                                {activeCase?.logs.map((log: any, i: number) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        initial={{ opacity: 0, x: -5 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: i * 0.15 }}
-                                                        className={log.c}
-                                                    >
-                                                        {log.t}
-                                                    </motion.div>
-                                                ))}
-                                            </div>
+                                    {/* Terminal Proof Visual */}
+                                    <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden mt-6">
+                                        <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                                            <span className="text-[10px] font-mono text-zinc-500 ml-2 font-medium tracking-wider uppercase">{activeCase?.id}_agent.log</span>
+                                        </div>
+                                        <div className="p-5 font-mono text-xs leading-relaxed flex flex-col gap-2">
+                                            {activeCase?.logs.map((log: any, i: number) => (
+                                                <motion.div
+                                                    key={i}
+                                                    initial={{ opacity: 0, x: -5 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: i * 0.15 }}
+                                                    className={log.c}
+                                                >
+                                                    {log.t}
+                                                </motion.div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
-                            </motion.div>
-                        </AnimatePresence>
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
             </div>
@@ -648,11 +442,11 @@ const UseCasesSection = () => {
 };
 
 
-// --- PRODUCT DEMO (Interactive Architecture Pipeline) ---
+// --- PRODUCT DEMO ---
 const ArchitectureDemoSection = () => {
-    const [activeStep, setActiveStep] = useState(0);
+    const [activeStep, setActiveStep] = React.useState(0);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const interval = setInterval(() => {
             setActiveStep((prev) => (prev + 1) % 4);
         }, 4000);
@@ -760,21 +554,18 @@ const ArchitectureDemoSection = () => {
                         />
                         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeStep}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.3 }}
-                                className="font-mono text-sm text-zinc-600 flex flex-col items-center text-center gap-2 z-10"
-                            >
-                                {activeStep === 0 && <span className="text-zinc-500">Ingesting: <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Q3_Report.pdf (3.2MB)</span> & <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Board_Rec.wav (14MB)</span></span>}
-                                {activeStep === 1 && <span><span className="text-zinc-700 font-medium">Generating Local Embeddings...</span> chunking 452 multidimensional segments.</span>}
-                                {activeStep === 2 && <span><span className="text-orange-600 font-bold">Action: Multi-Hop Search</span> | Query: <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">"financial risk AND revenue threat"</span></span>}
-                                {activeStep === 3 && <span><span className="text-emerald-600 font-bold">✓ Success:</span> "The board raised liquidity concerns <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Audio_04:12]</span> contradicting the optimistic Q3 PDF <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Pg. 12]</span>."</span>}
-                            </motion.div>
-                        </AnimatePresence>
+                        <motion.div
+                            key={activeStep}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="font-mono text-sm text-zinc-600 flex flex-col items-center text-center gap-2 z-10"
+                        >
+                            {activeStep === 0 && <span className="text-zinc-500">Ingesting: <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Q3_Report.pdf (3.2MB)</span> & <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Board_Rec.wav (14MB)</span></span>}
+                            {activeStep === 1 && <span><span className="text-zinc-700 font-medium">Generating Local Embeddings...</span> chunking 452 multidimensional segments.</span>}
+                            {activeStep === 2 && <span><span className="text-orange-600 font-bold">Action: Multi-Hop Search</span> | Query: <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">"financial risk AND revenue threat"</span></span>}
+                            {activeStep === 3 && <span><span className="text-emerald-600 font-bold">✓ Success:</span> "The board raised liquidity concerns <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Audio_04:12]</span> contradicting the optimistic Q3 PDF <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Pg. 12]</span>."</span>}
+                        </motion.div>
                     </div>
                 </div>
             </div>
@@ -782,27 +573,20 @@ const ArchitectureDemoSection = () => {
     );
 };
 
-const PlayCircle = ({ size, className }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon>
-    </svg>
-);
-
-
-// --- BENTO 2.0 ENGINE SECTION (Architecture Deep Dive) ---
+// --- BENTO 2.0 ENGINE SECTION ---
 const BentoEngineSection = () => {
-    const containerVariants: any = {
+    const containerVariants = {
         hidden: { opacity: 0 },
         show: {
             opacity: 1,
             transition: { staggerChildren: 0.15 }
         }
-    } as const;
+    };
 
-    const itemVariants: any = {
+    const itemVariants = {
         hidden: { opacity: 0, y: 30, scale: 0.98 },
         show: { opacity: 1, y: 0, scale: 1, transition: SPRING_CONFIG }
-    } as const;
+    };
 
     return (
         <section id="architecture" className="py-24 relative">
@@ -912,7 +696,7 @@ const BentoEngineSection = () => {
                                 {[...Array(6)].map((_, i) => (
                                     <div key={i} className="w-48 h-32 rounded-2xl bg-white border border-zinc-200/60 shadow-sm flex flex-col p-4 shrink-0 justify-between">
                                         <div className="flex items-center gap-2">
-                                            {i % 3 === 0 ? <FileText size={16} className="text-zinc-400" /> : i % 3 === 1 ? <Headphones size={16} className="text-zinc-400" /> : <ImageIcon size={16} className="text-zinc-400" />}
+                                            {i % 3 === 0 ? <FileText size={16} className="text-zinc-400" /> : i % 3 === 1 ? <FileText size={16} className="text-zinc-400" /> : <FileText size={16} className="text-zinc-400" />}
                                             <span className="text-[10px] font-mono text-zinc-500 truncate">
                                                 {i % 3 === 0 ? 'legal_brief_v2.pdf' : i % 3 === 1 ? 'q3_meeting.wav' : 'board_whiteboard.png'}
                                             </span>
