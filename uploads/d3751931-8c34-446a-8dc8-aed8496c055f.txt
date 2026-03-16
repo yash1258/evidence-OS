@@ -1,0 +1,19 @@
+Q3 Financial Report - Acme Corporation
+
+Executive Summary:
+Acme Corporation maintains a strong liquidity position with an estimated operational runway of 18 months under current burn rates of $2.1M per month. Revenue increased 12% quarter-over-quarter, reaching $8.4M. Operating expenses remained stable at $6.3M.
+
+Key Highlights:
+- Cash reserves: $37.8M as of September 30, 2025
+- Revenue growth: 12% QoQ, driven by enterprise segment
+- Customer acquisition cost reduced by 8%
+- Net retention rate: 115%
+- Headcount: 142 employees across 3 offices
+
+Risk Factors:
+- Delayed receivables from Q2 contracts totaling $4.2M
+- Currency exposure in APAC markets
+- Increased competition from TechRival Inc. in the mid-market segment
+
+Outlook:
+Management expects continued growth momentum into Q4, with new product launches expected to drive 15-20% revenue increase. Capital expenditure planned at $1.2M for infrastructure upgrades.
