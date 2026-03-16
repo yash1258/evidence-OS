@@ -20,8 +20,10 @@ import {
     BrainCircuit,
     Code2,
     FileText,
-    PlayCircle
+    PlayCircle,
+    Terminal
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import { MagneticButton } from '@/components/Shared/MagneticButton';
 import { TextReveal } from '@/components/Shared/TextReveal';
@@ -252,7 +254,7 @@ const ComparisonSection = () => {
                             <div className="mt-1 p-1 bg-zinc-900 rounded text-zinc-300 border border-zinc-800"><Lock size={14} /></div>
                             <div>
                                 <strong className="block text-zinc-100">Local-First Privacy</strong>
-                                <span className="text-sm text-zinc-400">The LLM doesn't see your raw data until the agent explicitly retrieves the specific required chunks.</span>
+                                <span className="text-sm text-zinc-400">The LLM doesn&apos;t see your raw data until the agent explicitly retrieves the specific required chunks.</span>
                             </div>
                         </li>
                     </ul>
@@ -263,7 +265,21 @@ const ComparisonSection = () => {
 };
 
 // --- USE CASES SECTION ---
-const USE_CASES = [
+interface UseCaseLog {
+    t: string;
+    c: string;
+}
+
+interface UseCase {
+    id: string;
+    icon: LucideIcon;
+    title: string;
+    hook: string;
+    desc: string;
+    logs: UseCaseLog[];
+}
+
+const USE_CASES: UseCase[] = [
     {
         id: 'finance',
         icon: Briefcase,
@@ -399,7 +415,7 @@ const UseCasesSection = () => {
                                 <div className="relative z-10 flex-1 flex flex-col justify-between gap-8">
                                     <div>
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-200 shadow-sm text-xs font-semibold text-zinc-600 mb-6 uppercase tracking-wider">
-                                            {activeCase?.icon && React.createElement(activeCase.icon as any, { size: 14, className: "text-orange-500" })} {activeCase?.title} View
+                                            {activeCase?.icon && React.createElement(activeCase.icon, { size: 14, className: "text-orange-500" })} {activeCase?.title} View
                                         </div>
                                         <h3 className="text-3xl md:text-4xl font-bold tracking-tighter text-zinc-900 mb-4">
                                             {activeCase?.hook}
@@ -418,7 +434,7 @@ const UseCasesSection = () => {
                                             <span className="text-[10px] font-mono text-zinc-500 ml-2 font-medium tracking-wider uppercase">{activeCase?.id}_agent.log</span>
                                         </div>
                                         <div className="p-5 font-mono text-xs leading-relaxed flex flex-col gap-2">
-                                            {activeCase?.logs.map((log: any, i: number) => (
+                                            {activeCase?.logs.map((log, i) => (
                                                 <motion.div
                                                     key={i}
                                                     initial={{ opacity: 0, x: -5 }}
@@ -471,7 +487,7 @@ const ArchitectureDemoSection = () => {
                         How the operating system thinks.
                     </h2>
                     <p className="text-zinc-500 text-lg leading-relaxed">
-                        EvidenceOS isn't just generating text; it is orchestrating a pipeline. Watch the data flow as a user asks a complex question.
+                        EvidenceOS isn&apos;t just generating text; it is orchestrating a pipeline. Watch the data flow as a user asks a complex question.
                     </p>
                 </div>
 
@@ -484,7 +500,7 @@ const ArchitectureDemoSection = () => {
                             className="bg-zinc-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-medium border border-zinc-800"
                         >
                             <Terminal size={16} className="text-zinc-400" />
-                            "Cross-reference the Q3 financial risks with yesterday's board meeting audio."
+                            &quot;Cross-reference the Q3 financial risks with yesterday&apos;s board meeting audio.&quot;
                         </motion.div>
                     </div>
 
@@ -563,8 +579,8 @@ const ArchitectureDemoSection = () => {
                         >
                             {activeStep === 0 && <span className="text-zinc-500">Ingesting: <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Q3_Report.pdf (3.2MB)</span> & <span className="text-zinc-700 font-semibold px-2 py-1 bg-zinc-100 rounded">Board_Rec.wav (14MB)</span></span>}
                             {activeStep === 1 && <span><span className="text-zinc-700 font-medium">Generating Local Embeddings...</span> chunking 452 multidimensional segments.</span>}
-                            {activeStep === 2 && <span><span className="text-orange-600 font-bold">Action: Multi-Hop Search</span> | Query: <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">"financial risk AND revenue threat"</span></span>}
-                            {activeStep === 3 && <span><span className="text-emerald-600 font-bold">✓ Success:</span> "The board raised liquidity concerns <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Audio_04:12]</span> contradicting the optimistic Q3 PDF <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Pg. 12]</span>."</span>}
+                            {activeStep === 2 && <span><span className="text-orange-600 font-bold">Action: Multi-Hop Search</span> | Query: <span className="bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">&quot;financial risk AND revenue threat&quot;</span></span>}
+                            {activeStep === 3 && <span><span className="text-emerald-600 font-bold">✓ Success:</span> &quot;The board raised liquidity concerns <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Audio_04:12]</span> contradicting the optimistic Q3 PDF <span className="text-xs bg-emerald-50 text-emerald-700 px-1 rounded border border-emerald-200">[Pg. 12]</span>.&quot;</span>}
                         </motion.div>
                     </div>
                 </div>

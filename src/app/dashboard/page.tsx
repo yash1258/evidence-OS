@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     Plus,
@@ -19,7 +18,9 @@ import {
     Activity,
     Upload,
     AlertCircle,
-    Database
+    Database,
+    Network,
+    Terminal
 } from 'lucide-react';
 
 import { MagneticButton } from '@/components/Shared/MagneticButton';
@@ -160,7 +161,11 @@ export default function Dashboard() {
 
     const handleOmnibarSubmit = () => {
         if (!searchQuery.trim()) return;
-        router.push(`/chat?q=${encodeURIComponent(searchQuery.trim())}`);
+        const params = new URLSearchParams({ q: searchQuery.trim() });
+        if (activeScope !== 'all') {
+            params.set('vault', activeScope);
+        }
+        router.push(`/chat?${params.toString()}`);
     };
 
     const containerVariants = {

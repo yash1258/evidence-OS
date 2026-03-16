@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 export interface LLMMessage {
   role: "user" | "model" | "assistant" | "function";
   content?: string;
-  parts?: any[];
+  parts?: Array<Record<string, unknown>>;
   functionCall?: { name: string; args: Record<string, unknown> };
   functionResponse?: { name: string; response: Record<string, unknown> };
 }
@@ -20,6 +20,22 @@ export interface ToolDeclaration {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
+}
+
+interface OpenRouterStreamToolCallDelta {
+  index?: number;
+  function?: {
+    name?: string;
+    arguments?: string;
+  };
+}
+
+function safeParseArgs(value: string): Record<string, unknown> {
+  try {
+    return value ? JSON.parse(value) as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
 }
 
 export interface LLMProvider {
@@ -69,17 +85,13 @@ export class GeminiProvider implements LLMProvider {
       };
     });
 
-    const model = this.ai.getGenerativeModel({
-        model: this.model,
+    const config: Record<string, unknown> = {
         systemInstruction: systemPrompt,
-    });
-
-    const generationConfig = {
         temperature: 0.1,
     };
 
-    const toolConfig = (tools && tools.length > 0) ? {
-        tools: [
+    if (tools && tools.length > 0) {
+        config.tools = [
             {
                 functionDeclarations: tools.map((t) => ({
                     name: t.name,
@@ -87,29 +99,31 @@ export class GeminiProvider implements LLMProvider {
                     parameters: t.parameters,
                 })),
             },
-        ],
-    } : {};
+        ];
+    }
 
     if (onToken) {
-        const result = await model.generateContentStream({
-            contents: contents as any,
-            generationConfig,
-            ...toolConfig
+        const stream = await this.ai.models.generateContentStream({
+            model: this.model,
+            contents,
+            config,
         });
 
         let fullText = "";
-        for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
+        let lastChunk: LLMResponse["raw"] | undefined;
+        for await (const chunk of stream) {
+            lastChunk = chunk;
+            const chunkText = chunk.text;
             if (chunkText) {
                 fullText += chunkText;
                 onToken(chunkText);
             }
         }
 
-        const response = await result.response;
+        const response = lastChunk as { text?: string; functionCalls?: Array<{ name?: string; args?: Record<string, unknown> }> } | undefined;
         return {
-            text: fullText || undefined,
-            functionCalls: response.functionCalls()
+            text: fullText || response?.text || undefined,
+            functionCalls: response?.functionCalls
                 ?.filter((fc) => fc.name)
                 .map((fc) => ({
                     name: fc.name!,
@@ -118,16 +132,14 @@ export class GeminiProvider implements LLMProvider {
             raw: response,
         };
     } else {
-        const result = await model.generateContent({
-            contents: contents as any,
-            generationConfig,
-            ...toolConfig
+        const response = await this.ai.models.generateContent({
+            model: this.model,
+            contents,
+            config,
         });
-
-        const response = result.response;
         return {
-            text: response.text() || undefined,
-            functionCalls: response.functionCalls()
+            text: response.text || undefined,
+            functionCalls: response.functionCalls
                 ?.filter((fc) => fc.name)
                 .map((fc) => ({
                     name: fc.name!,
@@ -229,7 +241,7 @@ export class OpenRouterProvider implements LLMProvider {
         const reader = res.body?.getReader();
         const decoder = new TextDecoder();
         let fullText = "";
-        let functionCalls: any[] = [];
+        const streamedToolCalls = new Map<number, { name: string; argsText: string }>();
 
         if (reader) {
             while (true) {
@@ -249,13 +261,29 @@ export class OpenRouterProvider implements LLMProvider {
                                 onToken(delta.content);
                             }
                             if (delta.tool_calls) {
-                                functionCalls = delta.tool_calls; 
+                                for (const toolCall of delta.tool_calls as OpenRouterStreamToolCallDelta[]) {
+                                    const index = toolCall.index ?? 0;
+                                    const current = streamedToolCalls.get(index) || { name: "", argsText: "" };
+                                    if (toolCall.function?.name) {
+                                        current.name = toolCall.function.name;
+                                    }
+                                    if (toolCall.function?.arguments) {
+                                        current.argsText += toolCall.function.arguments;
+                                    }
+                                    streamedToolCalls.set(index, current);
+                                }
                             }
                         } catch { /* ignore */ }
                     }
                 }
             }
         }
+        const functionCalls = Array.from(streamedToolCalls.values())
+          .filter((toolCall) => toolCall.name)
+          .map((toolCall) => ({
+            name: toolCall.name,
+            args: safeParseArgs(toolCall.argsText),
+          }));
         return { text: fullText, raw: {}, functionCalls };
     }
 

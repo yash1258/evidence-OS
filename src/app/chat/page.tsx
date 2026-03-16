@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
@@ -35,6 +35,15 @@ interface Vault {
     name: string;
 }
 
+interface AgentSource {
+    documentId?: string;
+    chunkId?: string;
+    chunkIndex?: number;
+    filename?: string;
+    preview?: string;
+    content?: string;
+}
+
 interface Citation {
     id: number;
     text: string;
@@ -57,6 +66,41 @@ interface Message {
     citations?: Citation[];
 }
 
+interface GraphNodeResponse {
+    id: string;
+    label: string;
+    type: string;
+    vaultId?: string | null;
+    properties?: {
+        size?: string;
+    };
+}
+
+type ChatStreamEvent =
+    | { type: 'thinking_step'; step: { type?: string; toolName?: string; toolArgs?: Record<string, unknown>; result?: unknown } }
+    | { type: 'text'; token: string }
+    | { type: 'answer'; answer: string; sources?: AgentSource[]; sessionId?: string }
+    | { type: 'error'; error: string };
+
+function formatThinkingDetails(step: ChatStreamEvent & { type: 'thinking_step' }): ReasoningStep {
+    const stepLabel = step.step.type === 'tool_call'
+        ? `Action: ${step.step.toolName || 'Reasoning'}`
+        : step.step.type === 'tool_result'
+        ? `Result: ${step.step.toolName || 'Observation'}`
+        : 'Reasoning';
+
+    const detailsSource = step.step.type === 'tool_call' ? step.step.toolArgs : step.step.result;
+    const details = detailsSource
+        ? JSON.stringify(detailsSource).slice(0, 240)
+        : 'Working through the next step.';
+
+    return {
+        step: stepLabel,
+        details,
+        time: '~',
+    };
+}
+
 // --- MAIN PAGE ---
 
 export default function ChatPage() {
@@ -69,7 +113,6 @@ export default function ChatPage() {
     const [vaults, setVaults] = useState<Vault[]>([]);
     const [activeVaultId, setActiveVaultId] = useState('global');
     const [graphStats, setGraphStats] = useState<{ nodeCount: number } | null>(null);
-    const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +124,19 @@ export default function ChatPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const query = params.get('q');
+        const vault = params.get('vault');
+
+        if (query) {
+            setInputValue(query);
+        }
+        if (vault) {
+            setActiveVaultId(vault);
+        }
+    }, []);
 
     const fetchData = useCallback(async () => {
         try {
@@ -95,13 +151,16 @@ export default function ChatPage() {
             const res = await fetch('/api/graph?mode=full');
             if (res.ok) {
                 const data = await res.json();
-                const docs = (data.nodes || [])
-                    .filter((n: any) => ['document', 'audio', 'image'].includes(n.type))
-                    .map((n: any, i: number) => ({
+                const nodes: GraphNodeResponse[] = Array.isArray(data.nodes) ? data.nodes : [];
+                const filteredNodes = nodes.filter((node) =>
+                    ['document', 'audio', 'image'].includes(node.type) &&
+                    (activeVaultId === 'global' ? !node.vaultId : node.vaultId === activeVaultId)
+                );
+                const docs = filteredNodes.map((node, i) => ({
                         id: i + 1,
-                        name: n.label || n.id,
-                        type: n.type === 'audio' ? 'audio' : n.type === 'image' ? 'image' : 'pdf',
-                        size: n.properties?.size || 'N/A',
+                        name: node.label || node.id,
+                        type: node.type === 'audio' ? 'audio' : node.type === 'image' ? 'image' : 'pdf',
+                        size: node.properties?.size || 'N/A',
                         status: 'indexed',
                     }));
                 setVaultFiles(docs);
@@ -116,7 +175,7 @@ export default function ChatPage() {
         } catch (err) {
             console.error('Failed to fetch chat data:', err);
         }
-    }, []);
+    }, [activeVaultId]);
 
     // Fetch actual vault files and vaults
     useEffect(() => {
@@ -127,7 +186,6 @@ export default function ChatPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploadStatus('uploading');
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -142,13 +200,9 @@ export default function ChatPage() {
 
             if (!res.ok) throw new Error('Upload failed');
             
-            setUploadStatus('success');
             await fetchData(); // Refresh file list and stats
-            setTimeout(() => setUploadStatus('idle'), 3000);
         } catch (err) {
             console.error('Upload error:', err);
-            setUploadStatus('error');
-            setTimeout(() => setUploadStatus('idle'), 3000);
         }
     };
 
@@ -200,14 +254,10 @@ export default function ChatPage() {
                     if (payload === '[DONE]') continue;
 
                     try {
-                        const parsed = JSON.parse(payload);
+                        const parsed = JSON.parse(payload) as ChatStreamEvent;
 
                         if (parsed.type === 'thinking_step') {
-                            thinkingSteps.push({
-                                step: `Action: ${parsed.step.tool || 'Reasoning'}`,
-                                details: parsed.step.input || parsed.step.result || '',
-                                time: '~',
-                            });
+                            thinkingSteps.push(formatThinkingDetails(parsed));
                             // Also update the message in state to show the latest thinking step if needed
                             setMessages(prev => prev.map(msg => msg.id === thinkingId ? {
                                 ...msg,
@@ -225,10 +275,10 @@ export default function ChatPage() {
                         if (parsed.type === 'answer') {
                             if (parsed.sessionId) setSessionId(parsed.sessionId);
 
-                            const citations: Citation[] = (parsed.sources || []).map((src: any, i: number) => ({
+                            const citations: Citation[] = (parsed.sources || []).map((src, i) => ({
                                 id: i + 1,
-                                text: src.metadata?.filename || `Source ${i + 1}`,
-                                ref: `Chunk ${src.metadata?.chunkIndex ?? i}`,
+                                text: src.filename || `Source ${i + 1}`,
+                                ref: typeof src.chunkIndex === 'number' ? `Chunk ${src.chunkIndex}` : 'Document',
                                 chunk: src.preview || src.content || '',
                             }));
 
@@ -254,7 +304,7 @@ export default function ChatPage() {
                                 citations: [],
                             } : msg));
                         }
-                    } catch (e) { /* skip */ }
+                    } catch { /* skip malformed stream frame */ }
                 }
             }
         } catch (err) {

@@ -3,19 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Cpu, Terminal } from 'lucide-react';
 
+const PHASES = [
+    "Vectorizing query...",
+    "Scanning ChromaDB...",
+    "Retrieving context chunks...",
+    "Cross-referencing entities...",
+    "Synthesizing logical output..."
+];
+
 export const DynamicThinkingState: React.FC = () => {
     const [phase, setPhase] = useState(0);
-    const phases = [
-        "Vectorizing query...",
-        "Scanning ChromaDB...",
-        "Retrieving context chunks...",
-        "Cross-referencing entities...",
-        "Synthesizing logical output..."
-    ];
 
     useEffect(() => {
         const timer = setInterval(() => {
-            setPhase((p) => (p < phases.length - 1 ? p + 1 : p));
+            setPhase((p) => (p < PHASES.length - 1 ? p + 1 : p));
         }, 800);
         return () => clearInterval(timer);
     }, []);
@@ -26,13 +27,13 @@ export const DynamicThinkingState: React.FC = () => {
                 <Cpu size={14} className="text-orange-500 animate-pulse" /> Agent is reasoning...
             </div>
             <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-2">
-                <Terminal size={10} /> {phases[phase]}
+                <Terminal size={10} /> {PHASES[phase]}
             </div>
             <div className="w-full h-1 bg-zinc-200 rounded-full overflow-hidden mt-1">
                 <motion.div
                     className="h-full bg-orange-400"
                     initial={{ width: "0%" }}
-                    animate={{ width: `${((phase + 1) / phases.length) * 100}%` }}
+                    animate={{ width: `${((phase + 1) / PHASES.length) * 100}%` }}
                     transition={{ ease: "easeInOut" }}
                 />
             </div>

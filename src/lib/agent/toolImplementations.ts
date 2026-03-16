@@ -10,11 +10,8 @@ import {
   getNodesByType,
   getEdgesByType,
   findPath,
-  getSubgraph,
-  type GraphNode,
-  type GraphEdge,
 } from "@/lib/storage/database";
-import { getProvider, type LLMProvider } from "./providers";
+import { getProvider } from "./providers";
 import fs from "fs";
 import path from "path";
 
@@ -51,6 +48,7 @@ export async function searchKnowledgeBase(args: {
       documentId: r.metadata.documentId,
       filename: r.metadata.filename,
       contentType: r.metadata.contentType,
+      chunkIndex: r.metadata.chunkIndex,
       preview: r.document || r.metadata.preview,
       relevanceScore: (1 - r.score).toFixed(3), // cosine distance to similarity
     })),
@@ -307,7 +305,7 @@ export async function listDocumentsToolFn(args: {
       chunkCount: d.chunkCount,
       uploadedAt: d.uploadedAt,
     })),
-    totalCount: docs.length,
+    totalCount: filteredDocs.length,
   };
 }
 

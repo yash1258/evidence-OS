@@ -89,6 +89,7 @@ export async function GET(request: Request) {
           id: n.id,
           type: n.type,
           label: n.label,
+          vaultId: n.vault_id,
           properties: n.properties,
         })),
         edges: uniqueEdges.map((e) => ({
@@ -149,12 +150,12 @@ export async function GET(request: Request) {
         })
         .slice(0, 4)
         .map((inv) => {
-          const neighbors = getNeighbors(inv.id, "sources");
+          const neighbors = getNeighbors(inv.id, "references", 0.0);
           return {
             id: inv.id,
             title: inv.label || "Untitled Investigation",
-            excerpt: inv.properties?.summary || inv.properties?.conclusion || "No summary available.",
-            time: inv.properties?.created_at || "Unknown",
+            excerpt: inv.properties?.answerPreview || inv.properties?.query || "No summary available.",
+            time: inv.created_at || "Unknown",
             sources: neighbors.length,
           };
         });

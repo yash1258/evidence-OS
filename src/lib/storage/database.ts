@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import fs from "fs";
 import path from "path";
 
 const DB_PATH = path.join(process.cwd(), "data", "evidence.db");
@@ -7,8 +8,6 @@ let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!db) {
-    // Ensure data directory exists
-    const fs = require("fs");
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -110,6 +109,54 @@ function initSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_nodes_type ON graph_nodes(type);
     CREATE INDEX IF NOT EXISTS idx_nodes_vault ON graph_nodes(vault_id);
   `);
+
+  runMigrations(db);
+}
+
+function hasColumn(db: Database.Database, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+}
+
+function addColumnIfMissing(db: Database.Database, table: string, definition: string): void {
+  const [column] = definition.trim().split(/\s+/, 1);
+  if (!column || hasColumn(db, table, column)) {
+    return;
+  }
+
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+}
+
+function runMigrations(db: Database.Database): void {
+  addColumnIfMissing(db, "documents", "vault_id TEXT REFERENCES vaults(id) ON DELETE SET NULL");
+  addColumnIfMissing(db, "graph_nodes", "vault_id TEXT");
+  addColumnIfMissing(db, "graph_nodes", "embedding_id TEXT");
+  addColumnIfMissing(db, "graph_nodes", "neighbors TEXT DEFAULT '[]'");
+  addColumnIfMissing(db, "graph_nodes", "created_at TEXT DEFAULT (datetime('now'))");
+  addColumnIfMissing(db, "graph_edges", "method TEXT DEFAULT 'structural'");
+  addColumnIfMissing(db, "graph_edges", "metadata TEXT DEFAULT '{}'");
+  addColumnIfMissing(db, "graph_edges", "created_at TEXT DEFAULT (datetime('now'))");
+
+  if (hasColumn(db, "documents", "vault_id")) {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_documents_vault ON documents(vault_id)");
+
+    db.prepare(`
+      UPDATE documents
+      SET vault_id = (
+        SELECT graph_nodes.vault_id
+        FROM graph_nodes
+        WHERE graph_nodes.id = documents.id
+      )
+      WHERE (vault_id IS NULL OR vault_id = '')
+        AND EXISTS (
+          SELECT 1
+          FROM graph_nodes
+          WHERE graph_nodes.id = documents.id
+            AND graph_nodes.vault_id IS NOT NULL
+            AND graph_nodes.vault_id != ''
+        )
+    `).run();
+  }
 }
 
 // ---- Vault CRUD ----
@@ -225,7 +272,15 @@ export function listDocuments(filter?: { contentType?: string; status?: string; 
 
 export function deleteDocument(id: string) {
   const db = getDb();
+  const chunkIds = getChunksByDocument(id).map((chunk) => chunk.id);
+
+  deleteNode(id);
+  for (const chunkId of chunkIds) {
+    deleteNode(chunkId);
+  }
+
   db.prepare("DELETE FROM documents WHERE id = ?").run(id);
+  rebuildAllNodeNeighbors();
 }
 
 // ---- Chunk CRUD ----
@@ -372,6 +427,14 @@ export function updateNodeNeighbors(nodeId: string): void {
   ).all(nodeId, nodeId) as Array<{ target_id?: string; source_id?: string }>;
   const neighborIds = edges.map(e => e.target_id || e.source_id).filter(Boolean);
   db.prepare("UPDATE graph_nodes SET neighbors = ? WHERE id = ?").run(JSON.stringify(neighborIds), nodeId);
+}
+
+export function rebuildAllNodeNeighbors(): void {
+  const db = getDb();
+  const rows = db.prepare("SELECT id FROM graph_nodes").all() as Array<{ id: string }>;
+  for (const row of rows) {
+    updateNodeNeighbors(row.id);
+  }
 }
 
 // ---- Graph Edge CRUD ----

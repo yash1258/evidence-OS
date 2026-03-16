@@ -45,9 +45,8 @@ async function generateMetadata(
     if (!apiKey) throw new Error("No API key");
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
-    const result = await model.generateContent({
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
       contents: [{
         role: "user",
         parts: [{
@@ -67,8 +66,7 @@ Return ONLY the JSON object, no markdown fencing.`
       }],
     });
 
-    const response = await result.response;
-    const text = response.text()?.trim() || "";
+    const text = response.text?.trim() || "";
     // Clean potential markdown fencing
     const cleaned = text.replace(/^```json?\n?/i, "").replace(/\n?```$/i, "").trim();
     const parsed = JSON.parse(cleaned);

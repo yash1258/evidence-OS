@@ -7,6 +7,25 @@ import { insertNode, insertEdge } from "@/lib/storage/database";
 
 const MAX_ITERATIONS = 10;
 
+export interface AgentSource {
+  documentId?: string;
+  chunkId?: string;
+  chunkIndex?: number;
+  filename: string;
+  preview?: string;
+  content?: string;
+  mimeType?: string;
+}
+
+function getRawResponseParts(raw: unknown): Array<Record<string, unknown>> | undefined {
+  if (!raw || typeof raw !== "object" || !("candidates" in raw)) {
+    return undefined;
+  }
+
+  const candidates = (raw as { candidates?: Array<{ content?: { parts?: Array<Record<string, unknown>> } }> }).candidates;
+  return candidates?.[0]?.content?.parts;
+}
+
 /**
  * Save a completed investigation as a graph node.
  * Links the investigation to all documents it referenced via "references" edges.
@@ -15,7 +34,7 @@ const MAX_ITERATIONS = 10;
 function saveInvestigationNode(
   query: string,
   answer: string,
-  sources: string[],
+  sources: AgentSource[],
   thinkingSteps: ThinkingStep[]
 ): void {
   try {
@@ -28,7 +47,8 @@ function saveInvestigationNode(
       properties: {
         query,
         answerPreview: answer.substring(0, 500),
-        sources,
+        created_at: new Date().toISOString(),
+        sources: sources.map((source) => source.filename),
         toolsUsed: thinkingSteps
           .filter((s) => s.type === "tool_call")
           .map((s) => s.toolName)
@@ -85,7 +105,7 @@ export interface ThinkingStep {
 export interface AgentResult {
   answer: string;
   thinkingSteps: ThinkingStep[];
-  sources: string[];
+  sources: AgentSource[];
 }
 
 /**
@@ -106,7 +126,7 @@ export async function runAgentLoop(
   onToken?: (token: string) => void
 ): Promise<AgentResult> {
   const thinkingSteps: ThinkingStep[] = [];
-  const sourcesSet = new Set<string>();
+  const sourcesMap = new Map<string, AgentSource>();
 
   // Build conversation messages
   const messages: LLMMessage[] = [
@@ -139,10 +159,8 @@ export async function runAgentLoop(
 
     // Check if we have function calls
     if (response.functionCalls && response.functionCalls.length > 0) {
-      // Preserve the FULL model response (including thought_signature) in conversation
-      // Gemini 3 requires thought_signature to be passed back for function calls to work
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawParts = (response.raw as any)?.candidates?.[0]?.content?.parts;
+      // Preserve the full model response so Gemini function-calling can continue.
+      const rawParts = getRawResponseParts(response.raw);
       if (rawParts) {
         messages.push({
           role: "model",
@@ -175,13 +193,36 @@ export async function runAgentLoop(
 
         // Track sources from search results
         if (fc.name === "search_knowledge_base" && toolResult.results) {
-          const results = toolResult.results as Array<{ filename?: string }>;
+          const results = toolResult.results as Array<{
+            chunkId?: string;
+            chunkIndex?: number;
+            documentId?: string;
+            filename?: string;
+            preview?: string;
+          }>;
           results.forEach((r) => {
-            if (r.filename) sourcesSet.add(r.filename);
+            if (!r.filename) return;
+            const key = r.chunkId || r.documentId || r.filename;
+            sourcesMap.set(key, {
+              chunkId: r.chunkId,
+              chunkIndex: r.chunkIndex,
+              documentId: r.documentId,
+              filename: r.filename,
+              preview: r.preview,
+            });
           });
         }
         if (fc.name === "get_document_content" && toolResult.filename) {
-          sourcesSet.add(toolResult.filename as string);
+          const requestedChunkId = typeof fc.args.chunkId === "string" ? fc.args.chunkId : undefined;
+          const source: AgentSource = {
+            chunkId: requestedChunkId,
+            documentId: typeof toolResult.documentId === "string" ? toolResult.documentId : undefined,
+            filename: toolResult.filename as string,
+            content: typeof toolResult.content === "string" ? toolResult.content : undefined,
+            preview: typeof toolResult.preview === "string" ? toolResult.preview : undefined,
+            mimeType: typeof toolResult.mimeType === "string" ? toolResult.mimeType : undefined,
+          };
+          sourcesMap.set(source.chunkId || source.documentId || source.filename, source);
         }
 
         // Record the tool result step
@@ -212,18 +253,22 @@ export async function runAgentLoop(
     if (response.text) {
       // Extract any source citations from the response text
       const sourcePattern = /\[([^\]]+\.[a-z]+)\]/gi;
-      let match;
+      let match: RegExpExecArray | null;
       while ((match = sourcePattern.exec(response.text)) !== null) {
-        sourcesSet.add(match[1]);
+        const matchedFilename = match[1];
+        if (!Array.from(sourcesMap.values()).some((source) => source.filename === matchedFilename)) {
+          sourcesMap.set(matchedFilename, { filename: matchedFilename });
+        }
       }
 
       // Save investigation as a graph node
-      saveInvestigationNode(userMessage, response.text, Array.from(sourcesSet), thinkingSteps);
+      const sources = Array.from(sourcesMap.values());
+      saveInvestigationNode(userMessage, response.text, sources, thinkingSteps);
 
       return {
         answer: response.text,
         thinkingSteps,
-        sources: Array.from(sourcesSet),
+        sources,
       };
     }
 
@@ -236,6 +281,6 @@ export async function runAgentLoop(
     answer:
       "I reached the maximum number of reasoning steps. Here's what I found so far based on my research into your knowledge base.",
     thinkingSteps,
-    sources: Array.from(sourcesSet),
+    sources: Array.from(sourcesMap.values()),
   };
 }

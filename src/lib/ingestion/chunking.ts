@@ -6,9 +6,6 @@ export interface ContentChunk {
 }
 
 const MAX_TEXT_TOKENS = 1000;
-const MAX_PDF_PAGES = 6;
-const MAX_AUDIO_SECONDS = 80;
-
 /**
  * Chunk text content into paragraph-aware segments
  */
