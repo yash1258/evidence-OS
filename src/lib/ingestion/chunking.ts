@@ -1,4 +1,5 @@
 import { PDFParse } from "pdf-parse";
+import { transcribeAudioFile } from "./audioTranscription";
 
 export interface ContentChunk {
   index: number;
@@ -9,6 +10,7 @@ export interface ContentChunk {
 }
 
 const MAX_TEXT_TOKENS = 1000;
+const AUDIO_TRANSCRIPT_MAX_CHARS = 2200;
 
 /**
  * Chunk text content into paragraph-aware segments.
@@ -168,7 +170,69 @@ export function chunkImage(buffer: Buffer, mimeType: string, filename: string): 
 /**
  * Chunk audio content - each audio file is a single chunk for now.
  */
-export function chunkAudio(buffer: Buffer, mimeType: string, filename: string): ContentChunk[] {
+function buildTranscriptChunks(
+  transcript: string,
+  mimeType: string,
+  filename: string,
+  startSeconds: number,
+  endSeconds: number,
+  language?: string
+): ContentChunk[] {
+  const transcriptChunks = chunkText(transcript, Math.max(400, Math.floor(AUDIO_TRANSCRIPT_MAX_CHARS / 4)));
+  return transcriptChunks.map((chunk) => ({
+    ...chunk,
+    mimeType: "text/plain",
+    preview: `${formatSeconds(startSeconds)}-${formatSeconds(endSeconds)} ${chunk.preview}`.trim(),
+    metadata: {
+      sourceMimeType: mimeType,
+      sourceType: "audio_transcript",
+      filename,
+      startSeconds,
+      endSeconds,
+      language: language || null,
+    },
+  }));
+}
+
+function formatSeconds(totalSeconds: number): string {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+export async function chunkAudio(
+  buffer: Buffer,
+  mimeType: string,
+  filename: string,
+  sourcePath?: string
+): Promise<ContentChunk[]> {
+  if (sourcePath) {
+    try {
+      const transcription = await transcribeAudioFile(sourcePath, mimeType);
+      const segments = transcription.segments || [];
+
+      if (segments.length > 0) {
+        const transcriptChunks = segments.flatMap((segment) =>
+          buildTranscriptChunks(
+            segment.text,
+            mimeType,
+            filename,
+            segment.start_seconds,
+            segment.end_seconds,
+            transcription.language
+          )
+        );
+
+        if (transcriptChunks.length > 0) {
+          return transcriptChunks;
+        }
+      }
+    } catch {
+      // Fall back to raw audio chunk if transcription fails.
+    }
+  }
+
   return [
     {
       index: 0,
@@ -185,7 +249,8 @@ export function chunkAudio(buffer: Buffer, mimeType: string, filename: string): 
 export async function chunkContent(
   content: string | Buffer,
   mimeType: string,
-  filename: string
+  filename: string,
+  sourcePath?: string
 ): Promise<ContentChunk[]> {
   if (mimeType === "text/plain" || mimeType === "text/markdown") {
     const text = typeof content === "string" ? content : content.toString("utf-8");
@@ -204,7 +269,7 @@ export async function chunkContent(
 
   if (mimeType.startsWith("audio/")) {
     const buffer = typeof content === "string" ? Buffer.from(content, "base64") : content;
-    return chunkAudio(buffer, mimeType, filename);
+    return chunkAudio(buffer, mimeType, filename, sourcePath);
   }
 
   const text = typeof content === "string" ? content : content.toString("utf-8");
