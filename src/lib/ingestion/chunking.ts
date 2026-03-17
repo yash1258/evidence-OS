@@ -1,5 +1,6 @@
 import { PDFParse } from "pdf-parse";
 import { transcribeAudioFile } from "./audioTranscription";
+import { analyzeImage } from "./imageAnalysis";
 
 export interface ContentChunk {
   index: number;
@@ -156,13 +157,30 @@ export async function chunkPdf(buffer: Buffer, filename: string): Promise<Conten
 /**
  * Chunk an image - each image is a single chunk.
  */
-export function chunkImage(buffer: Buffer, mimeType: string, filename: string): ContentChunk[] {
+export async function chunkImage(buffer: Buffer, mimeType: string, filename: string): Promise<ContentChunk[]> {
+  const analysis = await analyzeImage(buffer, mimeType);
+  const previewParts = [
+    analysis?.description,
+    analysis?.visibleText,
+  ].filter(Boolean);
+  const preview = previewParts.length > 0
+    ? previewParts.join(" | ").substring(0, 220)
+    : `Image: ${filename}`;
+
   return [
     {
       index: 0,
       content: buffer,
       mimeType,
-      preview: `Image: ${filename}`,
+      preview,
+      metadata: {
+        sourceMimeType: mimeType,
+        sourceType: "image",
+        filename,
+        imageDescription: analysis?.description || "",
+        visibleText: analysis?.visibleText || "",
+        notableEntities: analysis?.notableEntities || [],
+      },
     },
   ];
 }
