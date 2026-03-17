@@ -88,6 +88,14 @@ interface Message {
     citations?: Citation[];
 }
 
+interface PersistedMessageResponse {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    thinkingSteps?: Array<{ type?: string; toolName?: string; toolArgs?: Record<string, unknown>; result?: unknown }>;
+    sources?: AgentSource[];
+}
+
 interface GraphNodeResponse {
     id: string;
     label: string;
@@ -197,6 +205,7 @@ export default function ChatPage() {
         const params = new URLSearchParams(window.location.search);
         const query = params.get('q');
         const vault = params.get('vault');
+        const session = params.get('session');
 
         if (query) {
             setInputValue(query);
@@ -204,7 +213,47 @@ export default function ChatPage() {
         if (vault) {
             setActiveVaultId(vault);
         }
+        if (session) {
+            setSessionId(session);
+        }
     }, []);
+
+    useEffect(() => {
+        if (!sessionId) return;
+
+        fetch(`/api/investigations?sessionId=${encodeURIComponent(sessionId)}`)
+            .then((response) => response.json())
+            .then((data: { messages?: PersistedMessageResponse[] }) => {
+                const persistedMessages = Array.isArray(data.messages) ? data.messages : [];
+                setMessages(persistedMessages.map((message) => ({
+                    id: message.id,
+                    role: message.role === 'assistant' ? 'agent' : 'user',
+                    content: message.content,
+                    status: 'complete',
+                    reasoning: message.role === 'assistant' && Array.isArray(message.thinkingSteps)
+                        ? message.thinkingSteps.map((step) => formatThinkingDetails({
+                            type: 'thinking_step',
+                            step: step,
+                        }))
+                        : [],
+                    citations: message.role === 'assistant' && Array.isArray(message.sources)
+                        ? message.sources.map((source, index) => ({
+                            id: index + 1,
+                            text: source.filename || `Source ${index + 1}`,
+                            ref: formatCitationRef(source, index),
+                            chunk: source.preview || source.content || '',
+                            mimeType: source.sourceMimeType || source.mimeType,
+                            contentType: source.contentType,
+                            pageStart: source.pageStart,
+                            pageEnd: source.pageEnd,
+                            startSeconds: source.startSeconds,
+                            endSeconds: source.endSeconds,
+                        }))
+                        : [],
+                })));
+            })
+            .catch((error) => console.error('Failed to load investigation session:', error));
+    }, [sessionId]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -447,8 +496,7 @@ export default function ChatPage() {
             <ContextSidebar 
                 vaultFiles={vaultFiles} 
                 onNewInvestigation={() => {
-                    setMessages([]);
-                    setSessionId(null);
+                    router.push('/investigations');
                 }}
                 onUploadClick={() => fileInputRef.current?.click()}
                 onSettingsClick={() => router.push('/settings')}

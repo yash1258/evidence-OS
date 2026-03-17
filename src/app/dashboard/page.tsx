@@ -493,7 +493,7 @@ export default function Dashboard() {
                             <div className="flex items-center justify-between">
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Recent Investigations</h2>
                                 <button
-                                    onClick={() => router.push('/chat')}
+                                    onClick={() => router.push('/investigations')}
                                     className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
                                 >
                                     View History <ArrowUpRight size={12} />

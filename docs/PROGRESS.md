@@ -122,7 +122,7 @@ What improved:
 
 ### UI audit and live shell connections
 
-- pending commit in current branch
+- `9af18c2` Audit UI and connect live navigation workflows
 
 What improved:
 
@@ -130,6 +130,17 @@ What improved:
 - the app now has a functional graph explorer
 - the app now has a functional settings/models screen
 - dashboard and chat controls are less demo-like and more operational
+
+
+### Investigation history workflow
+
+- pending commit in current branch
+
+What improved:
+
+- the app now has a dedicated investigations/history screen
+- persisted sessions can be reopened directly
+- dashboard and chat now point to a real investigation workspace instead of the generic chat route
 
 
 ## Current Focus
@@ -211,3 +222,7 @@ Latest UX refinement:
 Current UI refinement:
 
 - convert placeholder controls into live workflows while preserving the design system
+
+Current workflow refinement:
+
+- turn persisted investigations into a first-class workspace
