@@ -98,6 +98,17 @@ What improved:
 - product refinement can be driven by stable sample projects instead of ad hoc uploads
 
 
+### Metadata and relationship quality
+
+- pending commit in current branch
+
+What improved:
+
+- document metadata now uses richer multi-chunk context instead of only the first preview
+- relationship inference now sees summaries, tags, entities, and evidence samples
+- support and contradiction inference should become more reliable on realistic vaults
+
+
 ## Current Focus
 
 ### Sprint 1: Ingestion quality
@@ -164,3 +175,8 @@ Current refinement target:
 
 - tighten vault overview structure
 - improve citation/source precision using the fixture corpus
+
+Current in-progress refinement:
+
+- improve metadata generation quality
+- improve document relationship inference quality

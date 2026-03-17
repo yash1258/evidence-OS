@@ -258,6 +258,9 @@ export async function buildAIEdges(
   documentId: string,
   documentSummary: string,
   documentName: string,
+  documentTags: string[],
+  documentEntities: string[],
+  newChunkPreviews: string[],
   vaultId?: string
 ): Promise<{ edgesCreated: number; insights: string[] }> {
   const insights: string[] = [];
@@ -272,10 +275,37 @@ export async function buildAIEdges(
 
   if (otherDocs.length === 0) return { edgesCreated, insights };
 
+  const chunkNodes = getNodesByType("chunk", vaultId);
+  const chunkPreviewByDoc = new Map<string, string[]>();
+  for (const chunkNode of chunkNodes) {
+    const parentDocument = chunkNode.properties?.parentDocument;
+    const preview = chunkNode.properties?.preview;
+    if (typeof parentDocument !== "string" || typeof preview !== "string" || preview.length === 0) {
+      continue;
+    }
+    const previews = chunkPreviewByDoc.get(parentDocument) || [];
+    if (previews.length < 3) {
+      previews.push(preview);
+      chunkPreviewByDoc.set(parentDocument, previews);
+    }
+  }
+
   // Build context for AI analysis
   const docSummaries = otherDocs
     .slice(0, 20) // Limit to 20 docs for context window
-    .map((d) => `[${d.id}] "${d.label}": ${(d.properties?.summary as string) || "No summary"}`)
+    .map((d) => {
+      const summary = (d.properties?.summary as string) || "No summary";
+      const tags = Array.isArray(d.properties?.tags) ? (d.properties?.tags as string[]) : [];
+      const entities = Array.isArray(d.properties?.entities) ? (d.properties?.entities as string[]) : [];
+      const samples = chunkPreviewByDoc.get(d.id) || [];
+      return [
+        `[${d.id}] "${d.label}"`,
+        `Summary: ${summary}`,
+        `Tags: ${tags.join(", ") || "none"}`,
+        `Entities: ${entities.join(", ") || "none"}`,
+        `Evidence samples: ${samples.join(" | ") || "none"}`,
+      ].join("\n");
+    })
     .join("\n");
 
   try {
@@ -291,6 +321,9 @@ export async function buildAIEdges(
 NEW DOCUMENT:
 Name: "${documentName}"
 Summary: ${documentSummary}
+Tags: ${documentTags.join(", ") || "none"}
+Entities: ${documentEntities.join(", ") || "none"}
+Evidence samples: ${newChunkPreviews.slice(0, 3).join(" | ") || "none"}
 
 EXISTING DOCUMENTS:
 ${docSummaries}
@@ -423,6 +456,9 @@ export async function buildGraphForDocument(
     documentId,
     summary,
     originalName,
+    tags,
+    entities,
+    chunkPreviews,
     vaultId
   );
   totalEdges += aiEdges;

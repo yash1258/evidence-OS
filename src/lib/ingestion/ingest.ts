@@ -37,6 +37,7 @@ export interface IngestResult {
  */
 async function generateMetadata(
   contentPreview: string,
+  additionalContext: string,
   filename: string,
   mimeType: string
 ): Promise<{ summary: string; tags: string[]; contentType: string; entities: string[] }> {
@@ -59,8 +60,11 @@ async function generateMetadata(
 
 Filename: ${filename}
 MIME Type: ${mimeType}
-Content preview:
+Primary preview:
 ${contentPreview.substring(0, 2000)}
+
+Additional context:
+${additionalContext.substring(0, 4000)}
 
 Return ONLY the JSON object, no markdown fencing.`
         }]
@@ -153,7 +157,11 @@ export async function ingestFile(
     // 4. Generate AI metadata from first chunk preview
     onProgress?.("Generating metadata with AI...");
     const previewText = chunks[0]?.preview || originalName;
-    const metadata = await generateMetadata(previewText, originalName, mimeType);
+    const metadataContext = chunks
+      .slice(0, 3)
+      .map((chunk, index) => `Chunk ${index + 1}: ${chunk.preview}${chunk.metadata ? `\nMetadata: ${JSON.stringify(chunk.metadata)}` : ""}`)
+      .join("\n\n");
+    const metadata = await generateMetadata(previewText, metadataContext, originalName, mimeType);
 
     // 5. Embed chunks in parallel batches
     onProgress?.(`Embedding ${chunks.length} chunk(s) in parallel...`);
