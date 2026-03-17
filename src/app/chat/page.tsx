@@ -35,6 +35,13 @@ interface Vault {
     name: string;
 }
 
+interface VaultGuidance {
+    overview?: string | null;
+    keyThemes?: string[];
+    riskSignals?: string[];
+    followUpQuestions?: string[];
+}
+
 interface AgentSource {
     documentId?: string;
     chunkId?: string;
@@ -159,6 +166,7 @@ export default function ChatPage() {
     const [vaultFiles, setVaultFiles] = useState<VaultFile[]>([]);
     const [vaults, setVaults] = useState<Vault[]>([]);
     const [activeVaultId, setActiveVaultId] = useState('global');
+    const [activeVaultGuidance, setActiveVaultGuidance] = useState<VaultGuidance | null>(null);
     const [graphStats, setGraphStats] = useState<{ nodeCount: number } | null>(null);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -203,6 +211,24 @@ export default function ChatPage() {
             if (statsRes.ok) {
                 const statsData = await statsRes.json();
                 setGraphStats(statsData.stats);
+                const activeSpace = Array.isArray(statsData.spaces)
+                    ? statsData.spaces.find((space: {
+                        id: string;
+                        overview?: string | null;
+                        overviewStats?: {
+                            keyThemes?: string[];
+                            riskSignals?: string[];
+                            followUpQuestions?: string[];
+                        } | null;
+                    }) => space.id === activeVaultId)
+                    : undefined;
+
+                setActiveVaultGuidance(activeSpace ? {
+                    overview: activeSpace.overview || null,
+                    keyThemes: activeSpace.overviewStats?.keyThemes || [],
+                    riskSignals: activeSpace.overviewStats?.riskSignals || [],
+                    followUpQuestions: activeSpace.overviewStats?.followUpQuestions || [],
+                } : null);
             }
 
             // Fetch files
@@ -264,10 +290,10 @@ export default function ChatPage() {
         }
     };
 
-    const handleSend = async () => {
-        if (!inputValue.trim()) return;
+    const submitMessage = async (messageText: string) => {
+        if (!messageText.trim()) return;
 
-        const userContent = inputValue;
+        const userContent = messageText;
         const newMsg: Message = { id: Date.now().toString(), role: 'user', content: userContent };
         setMessages(prev => [...prev, newMsg]);
         setInputValue("");
@@ -383,9 +409,17 @@ export default function ChatPage() {
         }
     };
 
+    const handleSend = async () => {
+        await submitMessage(inputValue);
+    };
+
     const openInspector = (citation: Citation) => {
         setActiveCitation(citation);
         setIsInspectorOpen(true);
+    };
+
+    const runSuggestedPrompt = async (prompt: string) => {
+        await submitMessage(prompt);
     };
 
     return (
@@ -470,6 +504,35 @@ export default function ChatPage() {
                                 <Terminal size={48} className="mb-4 text-zinc-400" />
                                 <h3 className="text-xl font-bold text-zinc-900">Start a New Investigation</h3>
                                 <p className="text-sm text-zinc-500 max-w-[300px] mt-2 font-medium">Ask the agent about your files, or drop new documents into the vault context.</p>
+                                {activeVaultId !== 'global' && activeVaultGuidance?.overview && (
+                                    <div className="mt-6 max-w-xl rounded-2xl border border-zinc-200 bg-white/80 p-4 text-left opacity-100 shadow-sm">
+                                        <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Project Snapshot</p>
+                                        <p className="text-sm text-zinc-700 leading-relaxed">{activeVaultGuidance.overview}</p>
+                                        {activeVaultGuidance.keyThemes && activeVaultGuidance.keyThemes.length > 0 && (
+                                            <p className="mt-3 text-xs text-zinc-500">
+                                                Themes: {activeVaultGuidance.keyThemes.slice(0, 4).join(', ')}
+                                            </p>
+                                        )}
+                                        {activeVaultGuidance.riskSignals && activeVaultGuidance.riskSignals.length > 0 && (
+                                            <p className="mt-2 text-xs text-zinc-500">
+                                                {activeVaultGuidance.riskSignals[0]}
+                                            </p>
+                                        )}
+                                        {activeVaultGuidance.followUpQuestions && activeVaultGuidance.followUpQuestions.length > 0 && (
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {activeVaultGuidance.followUpQuestions.slice(0, 3).map((question) => (
+                                                    <button
+                                                        key={question}
+                                                        onClick={() => runSuggestedPrompt(question)}
+                                                        className="px-3 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 hover:border-orange-300 hover:text-orange-700 transition-colors opacity-100"
+                                                    >
+                                                        {question}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                              </div>
                         ) : (
                             messages.map((msg) => {

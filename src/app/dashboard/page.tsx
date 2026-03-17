@@ -40,6 +40,7 @@ interface KnowledgeSpace {
         topTags?: Array<{ value: string; count: number }>;
         keyThemes?: string[];
         riskSignals?: string[];
+        followUpQuestions?: string[];
         relationshipCounts?: Record<string, number>;
     } | null;
 }
@@ -188,6 +189,20 @@ export default function Dashboard() {
         router.push(`/chat?${params.toString()}`);
     };
 
+    const handleSuggestedPrompt = (prompt: string, scopeId?: string) => {
+        const params = new URLSearchParams({ q: prompt });
+        const effectiveScope = scopeId && scopeId !== 'all' ? scopeId : activeScope !== 'all' ? activeScope : undefined;
+        if (effectiveScope) {
+            params.set('vault', effectiveScope);
+        }
+        router.push(`/chat?${params.toString()}`);
+    };
+
+    const activeSuggestedPrompts =
+        activeScope !== 'all'
+            ? knowledgeSpaces.find((space) => space.id === activeScope)?.overviewStats?.followUpQuestions?.slice(0, 3) || SUGGESTED_PROMPTS
+            : SUGGESTED_PROMPTS;
+
     const containerVariants = {
         hidden: { opacity: 0 },
         show: { opacity: 1, transition: { staggerChildren: 0.08 } }
@@ -300,8 +315,12 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex flex-wrap justify-center gap-2 mt-5">
-                            {SUGGESTED_PROMPTS.map((prompt, i) => (
-                                <button key={i} className="px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-sm transition-all cursor-pointer">
+                            {activeSuggestedPrompts.map((prompt, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleSuggestedPrompt(prompt)}
+                                    className="px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-sm transition-all cursor-pointer"
+                                >
                                     {prompt}
                                 </button>
                             ))}
@@ -424,6 +443,22 @@ export default function Dashboard() {
                                                 <p className="mt-2 text-[11px] leading-relaxed text-zinc-400 line-clamp-2">
                                                     {space.overviewStats.riskSignals[0]}
                                                 </p>
+                                            )}
+                                            {space.overviewStats?.followUpQuestions && space.overviewStats.followUpQuestions.length > 0 && (
+                                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                                    {space.overviewStats.followUpQuestions.slice(0, 2).map((question) => (
+                                                        <button
+                                                            key={question}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleSuggestedPrompt(question, space.id);
+                                                            }}
+                                                            className="px-2 py-1 rounded-md bg-white border border-zinc-200 text-[10px] font-medium text-zinc-600 hover:border-orange-300 hover:text-orange-700 transition-colors"
+                                                        >
+                                                            {question}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             )}
                                             {!space.overview && space.overviewNeedsRefresh && (
                                                 <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">

@@ -100,13 +100,24 @@ What improved:
 
 ### Metadata and relationship quality
 
-- pending commit in current branch
+- `5458ddc` Improve metadata and relationship inference quality
 
 What improved:
 
 - document metadata now uses richer multi-chunk context instead of only the first preview
 - relationship inference now sees summaries, tags, entities, and evidence samples
 - support and contradiction inference should become more reliable on realistic vaults
+
+
+### Project-guided prompting
+
+- pending commit in current branch
+
+What improved:
+
+- dashboard cards can turn overview follow-up questions into investigations
+- chat can start from vault-aware project guidance instead of a blank state
+- project memory is starting to actively guide the user, not only answer them
 
 
 ## Current Focus
@@ -180,3 +191,7 @@ Current in-progress refinement:
 
 - improve metadata generation quality
 - improve document relationship inference quality
+
+Latest UX refinement:
+
+- use vault overview memory to suggest the next best investigations
