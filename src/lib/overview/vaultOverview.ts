@@ -23,6 +23,9 @@ export interface VaultOverview {
   topTags: CountEntry[];
   topEntities: CountEntry[];
   relationshipCounts: Record<string, number>;
+  keyThemes: string[];
+  riskSignals: string[];
+  followUpQuestions: string[];
   representativeDocuments: Array<{
     id: string;
     filename: string;
@@ -68,6 +71,60 @@ function pickRepresentativeDocuments(documents: DocumentRecord[], limit: number 
       mimeType: doc.mimeType,
       summary: doc.summary || "No summary available.",
     }));
+}
+
+function buildKeyThemes(topTags: CountEntry[], topEntities: CountEntry[]): string[] {
+  const themes = [
+    ...topTags.slice(0, 4).map((entry) => entry.value),
+    ...topEntities.slice(0, 4).map((entry) => entry.value),
+  ];
+
+  return Array.from(new Set(themes)).slice(0, 6);
+}
+
+function buildRiskSignals(relationshipCounts: Record<string, number>, documents: DocumentRecord[]): string[] {
+  const signals: string[] = [];
+
+  if ((relationshipCounts.contradicts || 0) > 0) {
+    signals.push(`${relationshipCounts.contradicts} contradiction signal(s) are present across the vault.`);
+  }
+  if ((relationshipCounts.supports || 0) > 0) {
+    signals.push(`${relationshipCounts.supports} support relationship(s) reinforce recurring claims.`);
+  }
+
+  const legalDocs = documents.filter((doc) => doc.contentType === "legal").length;
+  const meetingDocs = documents.filter((doc) => doc.contentType === "meeting").length;
+  const reportDocs = documents.filter((doc) => doc.contentType === "report").length;
+
+  if (legalDocs > 0) {
+    signals.push(`This vault contains ${legalDocs} legal-oriented document(s), so clause and evidence consistency matters.`);
+  }
+  if (meetingDocs > 0 && reportDocs > 0) {
+    signals.push("Meeting materials and reports coexist here, which is often where strategy or factual drift appears.");
+  }
+
+  return signals.slice(0, 4);
+}
+
+function buildFollowUpQuestions(
+  scopeLabel: string,
+  relationshipCounts: Record<string, number>,
+  topEntities: CountEntry[]
+): string[] {
+  const questions = [`What is the strongest project-wide takeaway from ${scopeLabel}?`];
+
+  if ((relationshipCounts.contradicts || 0) > 0) {
+    questions.push("Where do the strongest contradictions appear, and what evidence supports each side?");
+  } else {
+    questions.push("Which files most strongly support the main themes in this vault?");
+  }
+
+  if (topEntities.length > 0) {
+    questions.push(`How do the key entities relate to ${topEntities[0].value}?`);
+  }
+
+  questions.push("What should be investigated next based on the current project evidence?");
+  return questions.slice(0, 4);
 }
 
 async function generateNarrativeOverview(
@@ -135,6 +192,9 @@ export async function buildVaultOverview(vaultId?: string, focus?: string): Prom
       topTags: [],
       topEntities: [],
       relationshipCounts: {},
+      keyThemes: [],
+      riskSignals: [],
+      followUpQuestions: [],
       representativeDocuments: [],
       overview: "No ready documents are available in this scope yet.",
       focus,
@@ -157,6 +217,9 @@ export async function buildVaultOverview(vaultId?: string, focus?: string): Prom
     acc[type] = getEdgesByType(type, 0.0, vaultId).length;
     return acc;
   }, {});
+  const keyThemes = buildKeyThemes(topTags, topEntities);
+  const riskSignals = buildRiskSignals(relationshipCounts, documents);
+  const followUpQuestions = buildFollowUpQuestions(scopeLabel, relationshipCounts, topEntities);
 
   const overview = await generateNarrativeOverview(
     scopeLabel,
@@ -178,6 +241,9 @@ export async function buildVaultOverview(vaultId?: string, focus?: string): Prom
     topTags,
     topEntities,
     relationshipCounts,
+    keyThemes,
+    riskSignals,
+    followUpQuestions,
     representativeDocuments: pickRepresentativeDocuments(documents),
     overview,
     focus,
@@ -196,6 +262,9 @@ export async function buildVaultOverview(vaultId?: string, focus?: string): Prom
         topTags: result.topTags,
         topEntities: result.topEntities,
         relationshipCounts: result.relationshipCounts,
+        keyThemes: result.keyThemes,
+        riskSignals: result.riskSignals,
+        followUpQuestions: result.followUpQuestions,
       },
     });
   }

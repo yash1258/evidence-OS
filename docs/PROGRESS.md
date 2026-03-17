@@ -76,6 +76,28 @@ What improved:
 - dashboard vault cards expose more project-level meaning
 
 
+### Image understanding and progress tracking
+
+- `8226c0e` Improve image ingestion and track product progress
+
+What improved:
+
+- images now carry richer descriptive metadata
+- multimodal image embeddings are complemented with visible-text and entity hints
+- the repo now tracks product progress explicitly
+
+
+### Fixture corpus and validation
+
+- `69b10f2` Add fixture vault corpus and validation script
+
+What improved:
+
+- we now have representative business, student, and legal fixture vaults
+- regression checks can validate ingested fixture state against SQLite
+- product refinement can be driven by stable sample projects instead of ad hoc uploads
+
+
 ## Current Focus
 
 ### Sprint 1: Ingestion quality
@@ -93,6 +115,12 @@ Next:
 
 - fixture vaults for regression
 - citation tightening
+
+Recent refinement:
+
+- overview structure is becoming more explicit
+- source citations now carry cleaner location labels
+- dashboard cards can expose more project-level signals
 
 
 ## How the App Is Improving
@@ -118,7 +146,7 @@ Still weak or incomplete:
 
 - image OCR-quality text extraction
 - scanned-document handling
-- fixture-based regression testing
+- fixture-based regression testing beyond structural validation
 - richer investigation workflows
 - proactive agent behaviors
 
@@ -131,3 +159,8 @@ Image ingestion quality:
 - generate image description and visible-text metadata
 - improve image preview text
 - make images materially useful in search, summaries, and vault overviews
+
+Current refinement target:
+
+- tighten vault overview structure
+- improve citation/source precision using the fixture corpus

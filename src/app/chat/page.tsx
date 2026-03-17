@@ -40,6 +40,7 @@ interface AgentSource {
     chunkId?: string;
     chunkIndex?: number;
     filename?: string;
+    locationLabel?: string;
     contentType?: string;
     mimeType?: string;
     sourceMimeType?: string;
@@ -103,6 +104,10 @@ function formatTimecode(totalSeconds: number): string {
 }
 
 function formatCitationRef(source: AgentSource, index: number): string {
+    if (source.locationLabel) {
+        return source.locationLabel;
+    }
+
     if (typeof source.pageStart === 'number') {
         if (typeof source.pageEnd === 'number' && source.pageEnd !== source.pageStart) {
             return `Pages ${source.pageStart}-${source.pageEnd}`;

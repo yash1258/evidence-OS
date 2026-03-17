@@ -13,6 +13,7 @@ export interface AgentSource {
   chunkId?: string;
   chunkIndex?: number;
   filename: string;
+  locationLabel?: string;
   contentType?: string;
   mimeType?: string;
   sourceMimeType?: string;
@@ -202,6 +203,7 @@ export async function runAgentLoop(
             chunkIndex?: number;
             documentId?: string;
             filename?: string;
+            locationLabel?: string;
             contentType?: string;
             mimeType?: string;
             sourceMimeType?: string;
@@ -219,6 +221,7 @@ export async function runAgentLoop(
               chunkIndex: r.chunkIndex,
               documentId: r.documentId,
               filename: r.filename,
+              locationLabel: r.locationLabel,
               contentType: r.contentType,
               mimeType: r.mimeType,
               sourceMimeType: r.sourceMimeType,
@@ -241,6 +244,7 @@ export async function runAgentLoop(
             chunkId: requestedChunkId,
             documentId: typeof toolResult.documentId === "string" ? toolResult.documentId : undefined,
             filename: toolResult.filename as string,
+            locationLabel: typeof toolResult.locationLabel === "string" ? toolResult.locationLabel : undefined,
             contentType: typeof toolResult.contentType === "string" ? toolResult.contentType : undefined,
             content: typeof toolResult.content === "string" ? toolResult.content : undefined,
             preview: typeof toolResult.preview === "string" ? toolResult.preview : undefined,

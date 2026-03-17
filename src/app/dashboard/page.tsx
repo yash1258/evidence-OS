@@ -38,6 +38,8 @@ interface KnowledgeSpace {
     overviewNeedsRefresh?: boolean;
     overviewStats?: {
         topTags?: Array<{ value: string; count: number }>;
+        keyThemes?: string[];
+        riskSignals?: string[];
         relationshipCounts?: Record<string, number>;
     } | null;
 }
@@ -408,9 +410,19 @@ export default function Dashboard() {
                                                     ))}
                                                 </div>
                                             )}
+                                            {space.overviewStats?.keyThemes && space.overviewStats.keyThemes.length > 0 && (
+                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                                                    Themes: {space.overviewStats.keyThemes.slice(0, 3).join(', ')}
+                                                </p>
+                                            )}
                                             {space.overview && (
                                                 <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 line-clamp-3">
                                                     {space.overview}
+                                                </p>
+                                            )}
+                                            {space.overviewStats?.riskSignals && space.overviewStats.riskSignals.length > 0 && (
+                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-400 line-clamp-2">
+                                                    {space.overviewStats.riskSignals[0]}
                                                 </p>
                                             )}
                                             {!space.overview && space.overviewNeedsRefresh && (

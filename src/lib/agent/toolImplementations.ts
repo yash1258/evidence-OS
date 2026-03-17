@@ -18,6 +18,35 @@ import path from "path";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 
+function buildLocationLabel(metadata: Record<string, string | number | boolean>): string | undefined {
+  const pageStart = typeof metadata.pageStart === "number" ? metadata.pageStart : undefined;
+  const pageEnd = typeof metadata.pageEnd === "number" ? metadata.pageEnd : undefined;
+  const startSeconds = typeof metadata.startSeconds === "number" ? metadata.startSeconds : undefined;
+  const endSeconds = typeof metadata.endSeconds === "number" ? metadata.endSeconds : undefined;
+  const chunkIndex = typeof metadata.chunkIndex === "number" ? metadata.chunkIndex : undefined;
+
+  if (pageStart !== undefined) {
+    return pageEnd !== undefined && pageEnd !== pageStart ? `Pages ${pageStart}-${pageEnd}` : `Page ${pageStart}`;
+  }
+
+  if (startSeconds !== undefined) {
+    const toTime = (totalSeconds: number) => {
+      const safe = Math.max(0, Math.floor(totalSeconds));
+      const minutes = Math.floor(safe / 60);
+      const seconds = safe % 60;
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    };
+
+    return endSeconds !== undefined ? `${toTime(startSeconds)}-${toTime(endSeconds)}` : toTime(startSeconds);
+  }
+
+  if (chunkIndex !== undefined) {
+    return `Chunk ${chunkIndex}`;
+  }
+
+  return undefined;
+}
+
 // ---- Tool Implementations ----
 
 export async function searchKnowledgeBase(args: {
@@ -56,6 +85,7 @@ export async function searchKnowledgeBase(args: {
       pageEnd: r.metadata.pageEnd,
       startSeconds: r.metadata.startSeconds,
       endSeconds: r.metadata.endSeconds,
+      locationLabel: buildLocationLabel(r.metadata),
       preview: r.document || r.metadata.preview,
       relevanceScore: (1 - r.score).toFixed(3), // cosine distance to similarity
     })),
@@ -114,6 +144,7 @@ export async function getDocumentContent(args: {
           content,
           preview: chunk.contentPreview,
           mimeType: chunk.mimeType,
+          locationLabel: buildLocationLabel(chunk.metadata as Record<string, string | number | boolean>),
           metadata: chunk.metadata,
         };
       }
@@ -124,6 +155,7 @@ export async function getDocumentContent(args: {
       documentId: chunk.documentId,
       preview: chunk.contentPreview,
       mimeType: chunk.mimeType,
+      locationLabel: buildLocationLabel(chunk.metadata as Record<string, string | number | boolean>),
       metadata: chunk.metadata,
     };
   }
@@ -151,6 +183,7 @@ export async function getDocumentContent(args: {
     tags: doc.tags,
     entities: doc.entities,
     chunkCount: doc.chunkCount,
+    locationLabel: "Document",
     content: fullContent,
     chunks: chunks.map((c) => ({
       id: c.id,
