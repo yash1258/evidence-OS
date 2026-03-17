@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { insertNode, insertEdge } from "@/lib/storage/database";
 
 const MAX_ITERATIONS = 10;
+const LOCAL_STREAM_CHUNK_SIZE = 18;
 
 export interface AgentSource {
   documentId?: string;
@@ -142,11 +143,8 @@ export async function runAgentLoop(
     // Call LLM with tools
     let response: LLMResponse;
     try {
-      // Use onToken only if we think this might be the final response
-      // But we can't be sure, so we pass it always. 
-      // If it's a function call, Gemini usually doesn't stream text.
       response = await withFallback((provider) =>
-        provider.generateContent(messages, SYSTEM_PROMPT, AGENT_TOOLS, onToken)
+        provider.generateContent(messages, SYSTEM_PROMPT, AGENT_TOOLS)
       );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
@@ -251,6 +249,12 @@ export async function runAgentLoop(
 
     // No function calls - this is the final text response
     if (response.text) {
+      if (onToken) {
+        for (let index = 0; index < response.text.length; index += LOCAL_STREAM_CHUNK_SIZE) {
+          onToken(response.text.slice(index, index + LOCAL_STREAM_CHUNK_SIZE));
+        }
+      }
+
       // Extract any source citations from the response text
       const sourcePattern = /\[([^\]]+\.[a-z]+)\]/gi;
       let match: RegExpExecArray | null;

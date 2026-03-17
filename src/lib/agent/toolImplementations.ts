@@ -1,4 +1,5 @@
 import { embedText } from "@/lib/ingestion/embedding";
+import { buildVaultOverview } from "@/lib/overview/vaultOverview";
 import { queryVectors } from "@/lib/storage/vectorStore";
 import {
   getDocument,
@@ -489,6 +490,28 @@ export async function findContradictions(args: {
   };
 }
 
+export async function summarizeProject(args: {
+  focus?: string;
+  vaultId?: string;
+}): Promise<Record<string, unknown>> {
+  const overview = await buildVaultOverview(args.vaultId, args.focus);
+
+  return {
+    scopeId: overview.scopeId,
+    scopeLabel: overview.scopeLabel,
+    generatedAt: overview.generatedAt,
+    overview: overview.overview,
+    totalDocuments: overview.totalDocuments,
+    totalChunks: overview.totalChunks,
+    byMediaType: overview.byMediaType,
+    byContentType: overview.byContentType,
+    topTags: overview.topTags,
+    topEntities: overview.topEntities,
+    relationshipCounts: overview.relationshipCounts,
+    representativeDocuments: overview.representativeDocuments,
+  };
+}
+
 // ---- Tool Executor ----
 
 const toolMap: Record<string, (args: Record<string, unknown>) => Promise<Record<string, unknown>>> = {
@@ -503,6 +526,7 @@ const toolMap: Record<string, (args: Record<string, unknown>) => Promise<Record<
   find_connections: findConnectionsFn as unknown as (args: Record<string, unknown>) => Promise<Record<string, unknown>>,
   get_entity_network: getEntityNetwork as unknown as (args: Record<string, unknown>) => Promise<Record<string, unknown>>,
   find_contradictions: findContradictions as unknown as (args: Record<string, unknown>) => Promise<Record<string, unknown>>,
+  summarize_project: summarizeProject as unknown as (args: Record<string, unknown>) => Promise<Record<string, unknown>>,
 };
 
 export async function executeTool(

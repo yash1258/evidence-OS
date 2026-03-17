@@ -106,6 +106,7 @@ function formatThinkingDetails(step: ChatStreamEvent & { type: 'thinking_step' }
 export default function ChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
+    const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
     const [isInspectorOpen, setIsInspectorOpen] = useState(false);
     const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -124,6 +125,17 @@ export default function ChatPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        const stored = window.localStorage.getItem('evidenceos.nav-sidebar-open');
+        if (stored !== null) {
+            setIsNavSidebarOpen(stored === 'true');
+        }
+    }, []);
+
+    useEffect(() => {
+        window.localStorage.setItem('evidenceos.nav-sidebar-open', String(isNavSidebarOpen));
+    }, [isNavSidebarOpen]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -337,7 +349,11 @@ export default function ChatPage() {
       `}} />
 
             {/* Leftmost Navigation */}
-            <NavSidebar nodeCount={graphStats?.nodeCount} />
+            <NavSidebar
+                nodeCount={graphStats?.nodeCount}
+                isOpen={isNavSidebarOpen}
+                onToggle={() => setIsNavSidebarOpen((open) => !open)}
+            />
 
             {/* Secondary Context Sidebar */}
             <ContextSidebar 

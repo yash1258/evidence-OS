@@ -210,4 +210,18 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  {
+    name: "summarize_project",
+    description:
+      "Generate a bird's-eye overview of the current vault/project. Use this when the user asks what the whole project is about, wants a high-level map of files, themes, entities, or overall evidence patterns.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        focus: {
+          type: Type.STRING,
+          description: "Optional focus area for the overview, such as risks, roadmap, people, product, research, or contradictions.",
+        },
+      },
+    },
+  },
 ];

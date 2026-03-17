@@ -8,6 +8,7 @@ import {
   insertDocument,
   updateDocument,
   insertChunk,
+  updateNodeProperties,
 } from "@/lib/storage/database";
 import { buildGraphForDocument } from "./graphBuilder";
 
@@ -32,7 +33,7 @@ export interface IngestResult {
 }
 
 /**
- * Generate metadata for a document using Gemini 1.5 Flash
+ * Generate metadata for a document using Gemini 3 Flash
  */
 async function generateMetadata(
   contentPreview: string,
@@ -46,7 +47,7 @@ async function generateMetadata(
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: [{
         role: "user",
         parts: [{
@@ -128,6 +129,14 @@ export async function ingestFile(
       status: "processing",
       vault_id: vaultId || null,
     });
+
+    if (vaultId) {
+      updateNodeProperties(vaultId, {
+        overview: "",
+        overviewGeneratedAt: null,
+        overviewNeedsRefresh: true,
+      });
+    }
 
     // 3. Chunk content
     onProgress?.("Analyzing content structure...");

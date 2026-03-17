@@ -8,6 +8,7 @@ import {
   getNodesByType,
   listVaults,
 } from "@/lib/storage/database";
+import { buildVaultOverview } from "@/lib/overview/vaultOverview";
 
 /**
  * GET /api/graph
@@ -72,6 +73,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ type: edgeType, edges });
     }
 
+    if (mode === "overview") {
+      const vaultId = searchParams.get("vaultId") || undefined;
+      const focus = searchParams.get("focus") || undefined;
+      const overview = await buildVaultOverview(vaultId, focus);
+      return NextResponse.json(overview);
+    }
+
     // Full graph (all nodes + edges) — for visualization
     if (mode === "full") {
       const allTypes = ["vault", "document", "audio", "image", "chunk", "entity", "investigation"];
@@ -110,6 +118,7 @@ export async function GET(request: Request) {
       const spaces = vaults.map((vault) => {
         const vaultDocs = getNodesByType("document", vault.id);
         const vaultChunks = getNodesByType("chunk", vault.id);
+        const vaultNode = getNode(vault.id);
         return {
           id: vault.id,
           name: vault.name,
@@ -118,6 +127,7 @@ export async function GET(request: Request) {
           chunks: vaultChunks.length,
           size: `${vaultDocs.length} docs, ${vaultChunks.length} chunks`,
           lastSync: vault.created_at,
+          overview: vaultNode?.properties?.overview || null,
           status: "synced",
           capacity: Math.max(1, vaultChunks.length),
         };
@@ -135,6 +145,7 @@ export async function GET(request: Request) {
           chunks: globalChunks.length,
           size: `${globalDocs.length} docs, ${globalChunks.length} chunks`,
           lastSync: "Live",
+          overview: null,
           status: "synced",
           capacity: Math.max(1, globalChunks.length),
         });
@@ -166,7 +177,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ spaces, investigations, stats });
     }
 
-    return NextResponse.json({ error: "Invalid mode. Use: stats, subgraph, neighbors, edges, full, dashboard" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid mode. Use: stats, subgraph, neighbors, edges, full, overview, dashboard" }, { status: 400 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Graph query failed" },

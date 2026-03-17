@@ -157,6 +157,44 @@ function runMigrations(db: Database.Database): void {
         )
     `).run();
   }
+
+  syncVaultGraphNodes(db);
+}
+
+function syncVaultGraphNodes(db: Database.Database): void {
+  db.prepare(`
+    INSERT OR IGNORE INTO graph_nodes (id, type, label, properties, vault_id, embedding_id, neighbors)
+    SELECT
+      vaults.id,
+      'vault',
+      vaults.name,
+      json_object('created_at', vaults.created_at),
+      vaults.id,
+      NULL,
+      '[]'
+    FROM vaults
+  `).run();
+
+  db.prepare(`
+    UPDATE graph_nodes
+    SET
+      type = 'vault',
+      label = (
+        SELECT vaults.name
+        FROM vaults
+        WHERE vaults.id = graph_nodes.id
+      ),
+      properties = json_object(
+        'created_at',
+        (
+          SELECT vaults.created_at
+          FROM vaults
+          WHERE vaults.id = graph_nodes.id
+        )
+      ),
+      vault_id = id
+    WHERE id IN (SELECT id FROM vaults)
+  `).run();
 }
 
 // ---- Vault CRUD ----
@@ -173,6 +211,21 @@ export function createVault(id: string, name: string): void {
     INSERT INTO vaults (id, name)
     VALUES (?, ?)
   `).run(id, name);
+
+  db.prepare(`
+    INSERT OR IGNORE INTO graph_nodes (id, type, label, properties, vault_id, embedding_id, neighbors)
+    VALUES (?, 'vault', ?, json_object('created_at', datetime('now')), ?, NULL, '[]')
+  `).run(id, name, id);
+
+  db.prepare(`
+    UPDATE graph_nodes
+    SET
+      type = 'vault',
+      label = ?,
+      properties = json_object('created_at', datetime('now')),
+      vault_id = ?
+    WHERE id = ?
+  `).run(name, id, id);
 }
 
 export function listVaults(): VaultRecord[] {
@@ -397,6 +450,17 @@ export function getNode(id: string): GraphNode | undefined {
     properties: JSON.parse(row.properties as string),
     neighbors: JSON.parse(row.neighbors as string),
   } as GraphNode;
+}
+
+export function updateNodeProperties(nodeId: string, properties: Record<string, unknown>): void {
+  const db = getDb();
+  const existing = getNode(nodeId);
+  if (!existing) return;
+
+  db.prepare("UPDATE graph_nodes SET properties = ? WHERE id = ?").run(
+    JSON.stringify({ ...existing.properties, ...properties }),
+    nodeId
+  );
 }
 
 export function getNodesByType(type: string, vaultId?: string): GraphNode[] {

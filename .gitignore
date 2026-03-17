@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local runtime artifacts
+/data/*.db-wal
+/data/*.db-shm
+/uploads/*
+!/uploads/.gitkeep

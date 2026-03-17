@@ -53,7 +53,7 @@ export class GeminiProvider implements LLMProvider {
   private ai: GoogleGenAI;
   private model: string;
 
-  constructor(model: string = "gemini-2.0-flash") {
+  constructor(model: string = "gemini-3-flash-preview") {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
     this.ai = new GoogleGenAI({ apiKey });
@@ -113,7 +113,8 @@ export class GeminiProvider implements LLMProvider {
         let lastChunk: LLMResponse["raw"] | undefined;
         for await (const chunk of stream) {
             lastChunk = chunk;
-            const chunkText = chunk.text;
+            const chunkHasFunctionCalls = Array.isArray(chunk.functionCalls) && chunk.functionCalls.length > 0;
+            const chunkText = chunkHasFunctionCalls ? undefined : chunk.text;
             if (chunkText) {
                 fullText += chunkText;
                 onToken(chunkText);
@@ -121,8 +122,9 @@ export class GeminiProvider implements LLMProvider {
         }
 
         const response = lastChunk as { text?: string; functionCalls?: Array<{ name?: string; args?: Record<string, unknown> }> } | undefined;
+        const responseHasFunctionCalls = Array.isArray(response?.functionCalls) && response.functionCalls.length > 0;
         return {
-            text: fullText || response?.text || undefined,
+            text: responseHasFunctionCalls ? undefined : (fullText || response?.text || undefined),
             functionCalls: response?.functionCalls
                 ?.filter((fc) => fc.name)
                 .map((fc) => ({
@@ -137,8 +139,9 @@ export class GeminiProvider implements LLMProvider {
             contents,
             config,
         });
+        const responseHasFunctionCalls = Array.isArray(response.functionCalls) && response.functionCalls.length > 0;
         return {
-            text: response.text || undefined,
+            text: responseHasFunctionCalls ? undefined : (response.text || undefined),
             functionCalls: response.functionCalls
                 ?.filter((fc) => fc.name)
                 .map((fc) => ({
@@ -158,7 +161,7 @@ export class OpenRouterProvider implements LLMProvider {
   private model: string;
   private baseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
-  constructor(model: string = "google/gemini-2.0-flash-001") {
+  constructor(model: string = "openrouter/hunter-alpha") {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
     this.apiKey = apiKey;

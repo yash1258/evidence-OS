@@ -11,7 +11,7 @@ The architecture is split between a local frontend/agent engine and a remote vec
 ### 1.1 Local Environment (Your Machine)
 - **Next.js Server**: Handles the React frontend, API routes, and agent orchestration.
 - **SQLite Database (`evidence.db`)**: Stores the **Knowledge Graph** (nodes and edges) and document metadata. SQLite is extremely lightweight and fast for local pathfinding (Breadth-First Search).
-- **Gemini Reasoning Engine**: The application securely calls the Gemini API (**`gemini-2.0-flash`**) to power the agent's reasoning loop and text embeddings (**`text-embedding-004`**).
+- **Gemini Reasoning Engine**: The application securely calls the Gemini API (**`gemini-3-flash-preview`**) to power the agent's reasoning loop and multimodal embeddings (**`gemini-embedding-2-preview`**).
 
 ### 1.2 Remote Environment (VPS: 152.53.164.238)
 - **ChromaDB**: The vector database used for semantic similarity search. ChromaDB is heavily RAM-dependent because it keeps vector indexes in memory for fast mathematical distance calculations.
@@ -28,7 +28,7 @@ When a document is uploaded to EvidenceOS, it passes through a multi-stage pipel
 2. The text is split into smaller, overlapping "chunks" for focused retrieval.
 
 ### Stage 2: Vector Embedding & Storage (Remote API Call)
-1. The chunks are sent to the `text-embedding-004` API to generate high-dimensional vectors.
+1. The chunks are sent to the `gemini-embedding-2-preview` API to generate high-dimensional vectors in a shared multimodal space.
 2. The chunks and their vectors are sent over the internet to the **remote ChromaDB server** (`http://152.53.164.238:8001`).
 
 ### Stage 3: Graph Construction (Local SQLite)
@@ -41,7 +41,7 @@ After vector storage succeeds, `src/lib/ingestion/graphBuilder.ts` constructs th
   * Extracts named entities and creates `co_mentions` edges between documents sharing the same entities.
   * Queries the remote ChromaDB for similar chunks and creates probabilistic `semantic_similar` edges.
 * **Tier 3: AI-Inferred Edges (Agentic)**
-  * Uses Gemini 2.0 Flash to read document summaries and autonomously generate higher-order relationship edges: `contradicts`, `references`, `amends`, and `supports`.
+  * Uses Gemini 3 Flash to read document summaries and autonomously generate higher-order relationship edges: `contradicts`, `references`, `amends`, and `supports`.
 
 ---
 

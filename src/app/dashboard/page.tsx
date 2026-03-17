@@ -34,6 +34,7 @@ interface KnowledgeSpace {
     files: number;
     size: string;
     lastSync: string;
+    overview?: string | null;
 }
 
 interface Investigation {
@@ -54,7 +55,7 @@ interface GraphStats {
 const SPRING_CONFIG = { type: "spring", stiffness: 120, damping: 20 } as const;
 
 const SUGGESTED_PROMPTS = [
-    "Summarize the latest uploaded document",
+    "Summarize this whole project",
     "Find contradictions across my evidence",
     "List all entities in the knowledge graph"
 ];
@@ -66,6 +67,7 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isFocused, setIsFocused] = useState(false);
     const [activeScope, setActiveScope] = useState('all');
+    const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
 
     // --- LIVE DATA STATE ---
     const [knowledgeSpaces, setKnowledgeSpaces] = useState<KnowledgeSpace[]>([]);
@@ -101,6 +103,17 @@ export default function Dashboard() {
     useEffect(() => {
         fetchDashboardData();
     }, [fetchDashboardData]);
+
+    useEffect(() => {
+        const stored = window.localStorage.getItem('evidenceos.nav-sidebar-open');
+        if (stored !== null) {
+            setIsNavSidebarOpen(stored === 'true');
+        }
+    }, []);
+
+    useEffect(() => {
+        window.localStorage.setItem('evidenceos.nav-sidebar-open', String(isNavSidebarOpen));
+    }, [isNavSidebarOpen]);
 
     // --- VAULT HANDLER ---
     const handleCreateVault = async (e: React.FormEvent) => {
@@ -194,7 +207,11 @@ export default function Dashboard() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-            <NavSidebar nodeCount={graphStats?.nodeCount} />
+            <NavSidebar
+                nodeCount={graphStats?.nodeCount}
+                isOpen={isNavSidebarOpen}
+                onToggle={() => setIsNavSidebarOpen((open) => !open)}
+            />
 
             {/* MAIN CONTENT AREA */}
             <main className="flex-1 flex flex-col relative min-w-0 overflow-y-auto custom-scrollbar bg-zinc-50/50">
@@ -377,6 +394,11 @@ export default function Dashboard() {
                                                 <span className="bg-zinc-100 px-1.5 py-0.5 rounded text-[10px]">{space.files} files</span>
                                                 <span>{space.size}</span>
                                             </div>
+                                            {space.overview && (
+                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 line-clamp-3">
+                                                    {space.overview}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="mt-5 relative z-10 flex flex-col gap-2">
                                             <div className="flex items-center justify-between text-[10px] font-mono">

@@ -250,7 +250,7 @@ export async function buildSemanticEdges(
 // ---- Tier 3: AI-Inferred Edges (Async, Background) ----
 
 /**
- * Use Gemini to detect relational edges between the new document
+ * Use Gemini 3 Flash to detect relational edges between the new document
  * and existing documents. Runs asynchronously after ingest completes.
  * Returns proactive insight alerts.
  */
@@ -285,7 +285,7 @@ export async function buildAIEdges(
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: `You are a document relationship analyzer. Analyze the NEW document against the EXISTING documents and identify relationships.
 
 NEW DOCUMENT:
@@ -336,7 +336,7 @@ Return ONLY the JSON array, no markdown fencing. Return [] if no relationships f
           confidence: rel.confidence,
           evidence: rel.evidence || "",
           method: "ai_inferred",
-          metadata: { model: "gemini-2.0-flash", vaultId },
+          metadata: { model: "gemini-3-flash-preview", vaultId },
         });
         edgesCreated++;
 
