@@ -45,3 +45,5 @@ next-env.d.ts
 /data/*.db-shm
 /uploads/*
 !/uploads/.gitkeep
+/.next-dev.out.log
+/.next-dev.err.log
