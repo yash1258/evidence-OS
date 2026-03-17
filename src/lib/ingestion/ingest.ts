@@ -144,7 +144,7 @@ export async function ingestFile(
       mimeType.startsWith("text/") || mimeType === "text/plain" || mimeType === "text/markdown"
         ? fileBuffer.toString("utf-8")
         : fileBuffer;
-    const chunks = chunkContent(contentForChunking, mimeType, originalName);
+    const chunks = await chunkContent(contentForChunking, mimeType, originalName);
 
     if (chunks.length === 0) {
         throw new Error("No content could be extracted from this file.");
@@ -183,6 +183,7 @@ export async function ingestFile(
           metadata: {
             tags: metadata.tags,
             contentType: metadata.contentType,
+            ...(chunk.metadata || {}),
           },
         });
 
@@ -198,6 +199,7 @@ export async function ingestFile(
             tags: metadata.tags.join(","),
             preview: chunk.preview.substring(0, 500),
             vaultId: vaultId || "",
+            ...(chunk.metadata || {}),
           },
           document: chunk.preview,
         };
