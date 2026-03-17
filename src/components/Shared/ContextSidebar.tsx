@@ -24,6 +24,7 @@ interface ContextSidebarProps {
     vaultFiles: VaultFile[];
     onNewInvestigation?: () => void;
     onUploadClick?: () => void;
+    onSettingsClick?: () => void;
     vectorCount?: string;
 }
 
@@ -32,6 +33,7 @@ export const ContextSidebar = ({
     vaultFiles, 
     onNewInvestigation, 
     onUploadClick,
+    onSettingsClick,
     vectorCount = "24.8M"
 }: ContextSidebarProps) => {
     return (
@@ -47,7 +49,7 @@ export const ContextSidebar = ({
                     </div>
                     <span className="font-semibold text-sm text-zinc-100 tracking-tight">Vault Context</span>
                 </div>
-                <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                <button onClick={onSettingsClick} className="text-zinc-500 hover:text-zinc-300 transition-colors">
                     <Settings size={16} />
                 </button>
             </div>

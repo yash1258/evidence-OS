@@ -111,13 +111,25 @@ What improved:
 
 ### Project-guided prompting
 
-- pending commit in current branch
+- `3aa9780` Add project-guided investigation prompts
 
 What improved:
 
 - dashboard cards can turn overview follow-up questions into investigations
 - chat can start from vault-aware project guidance instead of a blank state
 - project memory is starting to actively guide the user, not only answer them
+
+
+### UI audit and live shell connections
+
+- pending commit in current branch
+
+What improved:
+
+- major dead navigation items now route to live pages
+- the app now has a functional graph explorer
+- the app now has a functional settings/models screen
+- dashboard and chat controls are less demo-like and more operational
 
 
 ## Current Focus
@@ -195,3 +207,7 @@ Current in-progress refinement:
 Latest UX refinement:
 
 - use vault overview memory to suggest the next best investigations
+
+Current UI refinement:
+
+- convert placeholder controls into live workflows while preserving the design system

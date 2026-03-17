@@ -91,6 +91,7 @@ export default function Dashboard() {
     const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
     const [newVaultName, setNewVaultName] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -242,7 +243,10 @@ export default function Dashboard() {
 
                 <header className="h-14 bg-white/70 backdrop-blur-xl border-b border-zinc-200/60 flex items-center justify-end px-6 lg:px-8 sticky top-0 z-30 shrink-0">
                     <div className="flex items-center gap-4 shrink-0">
-                        <button className="flex items-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+                        <button
+                            onClick={() => searchInputRef.current?.focus()}
+                            className="flex items-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+                        >
                             <Search size={14} /> <span className="hidden sm:inline">Search OS</span>
                         </button>
                         <div className="w-px h-4 bg-zinc-200" />
@@ -271,6 +275,7 @@ export default function Dashboard() {
                             <div className="flex items-center px-4 py-3.5 border-b border-zinc-100 bg-white relative z-10">
                                 <Sparkles size={18} className={`shrink-0 mr-3 transition-colors ${isFocused ? 'text-orange-500' : 'text-zinc-400'}`} />
                                 <input
+                                    ref={searchInputRef}
                                     type="text"
                                     placeholder="Ask about your documents, cross-reference files, or extract data..."
                                     className="flex-1 bg-transparent border-none outline-none text-base text-zinc-800 placeholder:text-zinc-400 min-w-0"
@@ -487,7 +492,10 @@ export default function Dashboard() {
                         <motion.div variants={itemVariants} className="lg:col-span-2 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Recent Investigations</h2>
-                                <button className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1">
+                                <button
+                                    onClick={() => router.push('/chat')}
+                                    className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
+                                >
                                     View History <ArrowUpRight size={12} />
                                 </button>
                             </div>
@@ -555,7 +563,10 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
-                                <button className="relative z-10 w-full py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 transition-colors text-xs font-medium text-zinc-300 flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => router.push(activeScope !== 'all' ? `/graph?vault=${encodeURIComponent(activeScope)}` : '/graph')}
+                                    className="relative z-10 w-full py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 transition-colors text-xs font-medium text-zinc-300 flex items-center justify-center gap-2"
+                                >
                                     <Terminal size={14} /> View Telemetry Logs
                                 </button>
                             </div>

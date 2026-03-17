@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
     Search,
     Terminal,
@@ -157,6 +158,7 @@ function formatThinkingDetails(step: ChatStreamEvent & { type: 'thinking_step' }
 // --- MAIN PAGE ---
 
 export default function ChatPage() {
+    const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
     const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
@@ -449,6 +451,7 @@ export default function ChatPage() {
                     setSessionId(null);
                 }}
                 onUploadClick={() => fileInputRef.current?.click()}
+                onSettingsClick={() => router.push('/settings')}
                 vectorCount={graphStats?.nodeCount?.toString()}
             />
 
@@ -484,7 +487,10 @@ export default function ChatPage() {
                             </select>
                         </div>
                         <div className="w-px h-4 bg-zinc-200" />
-                        <button className="text-xs font-medium text-zinc-500 hover:text-zinc-900 flex items-center gap-1.5 transition-colors shrink-0">
+                        <button
+                            onClick={() => router.push(activeVaultId !== 'global' ? `/graph?vault=${encodeURIComponent(activeVaultId)}` : '/graph')}
+                            className="text-xs font-medium text-zinc-500 hover:text-zinc-900 flex items-center gap-1.5 transition-colors shrink-0"
+                        >
                             <Network size={14} /> Knowledge Graph
                         </button>
                         <div className="w-px h-4 bg-zinc-200" />
@@ -611,11 +617,19 @@ export default function ChatPage() {
 
                             <div className="flex items-center justify-between px-2 pb-1">
                                 <div className="flex items-center gap-1">
-                                    <button className="p-2 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                                    >
                                         <Paperclip size={18} />
                                     </button>
                                     <div className="h-4 w-px bg-zinc-200 mx-1" />
-                                    <button className="px-2 py-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-md transition-colors flex items-center gap-1.5">
+                                    <button
+                                        onClick={() => runSuggestedPrompt(inputValue.trim()
+                                            ? `Investigate this deeply using cross-document reasoning, contradictions, and project-wide context: ${inputValue}`
+                                            : activeVaultGuidance?.followUpQuestions?.[0] || "Summarize this whole project and surface contradictions, support signals, and next steps.")}
+                                        className="px-2 py-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-md transition-colors flex items-center gap-1.5"
+                                    >
                                         <Search size={14} /> Deep Search
                                     </button>
                                 </div>

@@ -168,17 +168,17 @@ export const NavSidebar = ({ className, nodeCount, isOpen = true, onToggle }: Na
                 )}
 
                 <NavItem
-                    href="#"
+                    href="/graph"
                     icon={Network}
                     label="Graph Explorer"
-                    isActive={false}
+                    isActive={pathname === '/graph'}
                     compact={compact}
                 />
                 <NavItem
-                    href="#"
+                    href="/settings"
                     icon={Settings}
                     label="Settings & Models"
-                    isActive={false}
+                    isActive={pathname === '/settings'}
                     compact={compact}
                 />
             </div>
