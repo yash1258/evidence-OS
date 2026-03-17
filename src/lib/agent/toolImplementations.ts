@@ -548,6 +548,9 @@ export async function summarizeProject(args: {
     topTags: overview.topTags,
     topEntities: overview.topEntities,
     relationshipCounts: overview.relationshipCounts,
+    keyThemes: overview.keyThemes,
+    riskSignals: overview.riskSignals,
+    followUpQuestions: overview.followUpQuestions,
     representativeDocuments: overview.representativeDocuments,
   };
 }
