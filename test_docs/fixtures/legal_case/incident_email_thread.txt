@@ -1,0 +1,11 @@
+Email Thread - October 6, 2025
+
+From: ops@blueharbor.example
+To: counsel@calderwest.example
+
+Subject: Incident timeline clarification
+
+Email excerpt:
+Our on-call team did not acknowledge the outage until 52 minutes after the first alert because the pager rotation failed. Full service was restored approximately 6 hours after the outage began.
+
+No formal weekly incident summary was sent that week.

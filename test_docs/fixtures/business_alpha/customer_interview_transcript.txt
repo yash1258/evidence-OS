@@ -1,0 +1,22 @@
+Customer Interview Transcript - Northstar Logistics
+
+Interviewee: Priya Menon, VP Operations
+Interviewer: Acme Product Research
+Date: October 11, 2025
+
+Transcript Excerpt:
+
+Priya:
+We like the reporting tools, but the rollout has been slower than expected. The onboarding team needed more support than we were promised. We also evaluated TechRival because their pricing is much lower, but their analytics looked too shallow for our team.
+
+Interviewer:
+What is the main risk to renewal?
+
+Priya:
+If Acme cannot speed up implementation and show clearer ROI before procurement review, the renewal becomes difficult. The product itself is strong, but budget pressure is real.
+
+Interviewer:
+What would improve confidence?
+
+Priya:
+Better executive dashboards, faster onboarding, and proof that the product reduces manual reconciliation work.

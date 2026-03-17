@@ -1,0 +1,14 @@
+{
+  "vaultName": "Business Alpha Fixture",
+  "domain": "business",
+  "expectedDocumentCount": 4,
+  "minChunkCount": 4,
+  "expectedEntities": ["Acme Corporation", "TechRival", "Jane Chen", "Mark Williams"],
+  "expectedContentTypes": ["meeting", "report", "business"],
+  "expectedRelationships": ["co_mentions", "supports"],
+  "recommendedQueries": [
+    "What is this whole project about?",
+    "What contradicts the Q3 report?",
+    "What risks are emerging across the project?"
+  ]
+}

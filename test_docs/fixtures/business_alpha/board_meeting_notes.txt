@@ -1,0 +1,23 @@
+Board Meeting Minutes - October 15, 2025
+Acme Corporation - Confidential
+
+Attendees: CEO Jane Chen, CFO Mark Williams, CTO Sarah Park, Board Members
+
+Discussion Points:
+
+1. Financial Review (CFO Mark Williams):
+   Given the delayed receivables from Q2 and the accelerating burn rate, our actual safe operational runway is closer to 12 months, not the 18 months stated in the written Q3 report. The burn rate has increased to $2.5M per month due to the unplanned hiring in the engineering department. We need to adjust the written Q3 models before any public release.
+
+2. Revenue Concerns:
+   While the Q3 report shows 12% QoQ growth, approximately $1.8M of that revenue is from one-time consulting engagements that will not recur. Normalized recurring revenue growth is closer to 6%.
+
+3. Competitive Landscape:
+   TechRival Inc. has launched a directly competing product at 40% lower price point. Three enterprise deals in the pipeline have been delayed due to this competitive pressure. The mid-market segment is particularly at risk.
+
+4. Action Items:
+   - Revise runway projections with conservative assumptions
+   - Freeze non-essential hiring immediately
+   - Accelerate Q4 product launch timeline
+   - CEO to meet TechRival customers for win-back strategy
+
+5. Next Meeting: November 12, 2025

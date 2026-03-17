@@ -1,0 +1,11 @@
+Master Services Agreement - Excerpt
+
+Section 4.2 Service Levels:
+Vendor must respond to Severity 1 incidents within 30 minutes and restore core service within 4 hours.
+
+Section 7.1 Reporting:
+Vendor will provide weekly incident summaries and written root-cause analysis for every Severity 1 outage.
+
+Parties:
+- Calder & West LLP
+- BlueHarbor Systems

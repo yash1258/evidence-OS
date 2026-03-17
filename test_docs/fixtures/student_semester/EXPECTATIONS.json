@@ -1,0 +1,14 @@
+{
+  "vaultName": "Student Semester Fixture",
+  "domain": "student",
+  "expectedDocumentCount": 4,
+  "minChunkCount": 4,
+  "expectedEntities": ["Professor Anita Rao", "Ebbinghaus forgetting curve", "retrieval practice"],
+  "expectedContentTypes": ["study-notes", "general"],
+  "expectedRelationships": ["co_mentions", "supports"],
+  "recommendedQueries": [
+    "What is this semester project about?",
+    "Quiz me on weak areas in these notes.",
+    "What concepts recur across this vault?"
+  ]
+}

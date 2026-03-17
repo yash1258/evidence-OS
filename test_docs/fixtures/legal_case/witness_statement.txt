@@ -1,0 +1,5 @@
+Witness Statement - Maya Brooks
+
+I was present on the incident bridge. BlueHarbor engineering acknowledged internally that the service-level target had been missed. The initial response was delayed by nearly one hour and the root-cause memo was prepared two weeks later.
+
+I also heard the account manager say the customer should not be sent the raw outage timeline until legal reviewed it.

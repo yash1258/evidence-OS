@@ -1,0 +1,14 @@
+{
+  "vaultName": "Legal Case Fixture",
+  "domain": "legal",
+  "expectedDocumentCount": 4,
+  "minChunkCount": 4,
+  "expectedEntities": ["BlueHarbor Systems", "Calder & West LLP", "Maya Brooks"],
+  "expectedContentTypes": ["legal", "business", "general"],
+  "expectedRelationships": ["co_mentions", "supports"],
+  "recommendedQueries": [
+    "What is this case file about?",
+    "Where does the evidence suggest an SLA breach?",
+    "What contradictions or support signals exist across these materials?"
+  ]
+}
