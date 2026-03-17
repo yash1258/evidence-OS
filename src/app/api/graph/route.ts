@@ -128,6 +128,8 @@ export async function GET(request: Request) {
           size: `${vaultDocs.length} docs, ${vaultChunks.length} chunks`,
           lastSync: vault.created_at,
           overview: vaultNode?.properties?.overview || null,
+          overviewStats: vaultNode?.properties?.overviewStats || null,
+          overviewNeedsRefresh: Boolean(vaultNode?.properties?.overviewNeedsRefresh),
           status: "synced",
           capacity: Math.max(1, vaultChunks.length),
         };
@@ -146,6 +148,8 @@ export async function GET(request: Request) {
           size: `${globalDocs.length} docs, ${globalChunks.length} chunks`,
           lastSync: "Live",
           overview: null,
+          overviewStats: null,
+          overviewNeedsRefresh: false,
           status: "synced",
           capacity: Math.max(1, globalChunks.length),
         });

@@ -48,8 +48,14 @@ export async function searchKnowledgeBase(args: {
       chunkId: r.id,
       documentId: r.metadata.documentId,
       filename: r.metadata.filename,
+      mimeType: r.metadata.mimeType,
+      sourceMimeType: r.metadata.sourceMimeType,
       contentType: r.metadata.contentType,
       chunkIndex: r.metadata.chunkIndex,
+      pageStart: r.metadata.pageStart,
+      pageEnd: r.metadata.pageEnd,
+      startSeconds: r.metadata.startSeconds,
+      endSeconds: r.metadata.endSeconds,
       preview: r.document || r.metadata.preview,
       relevanceScore: (1 - r.score).toFixed(3), // cosine distance to similarity
     })),
@@ -108,6 +114,7 @@ export async function getDocumentContent(args: {
           content,
           preview: chunk.contentPreview,
           mimeType: chunk.mimeType,
+          metadata: chunk.metadata,
         };
       }
     }

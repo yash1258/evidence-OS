@@ -35,6 +35,11 @@ interface KnowledgeSpace {
     size: string;
     lastSync: string;
     overview?: string | null;
+    overviewNeedsRefresh?: boolean;
+    overviewStats?: {
+        topTags?: Array<{ value: string; count: number }>;
+        relationshipCounts?: Record<string, number>;
+    } | null;
 }
 
 interface Investigation {
@@ -394,9 +399,23 @@ export default function Dashboard() {
                                                 <span className="bg-zinc-100 px-1.5 py-0.5 rounded text-[10px]">{space.files} files</span>
                                                 <span>{space.size}</span>
                                             </div>
+                                            {space.overviewStats?.topTags && space.overviewStats.topTags.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    {space.overviewStats.topTags.slice(0, 2).map((tag) => (
+                                                        <span key={tag.value} className="px-1.5 py-0.5 rounded bg-orange-50 border border-orange-100 text-[10px] font-mono text-orange-700">
+                                                            {tag.value}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                             {space.overview && (
                                                 <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 line-clamp-3">
                                                     {space.overview}
+                                                </p>
+                                            )}
+                                            {!space.overview && space.overviewNeedsRefresh && (
+                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+                                                    Project overview will refresh on the next project-wide summary.
                                                 </p>
                                             )}
                                         </div>

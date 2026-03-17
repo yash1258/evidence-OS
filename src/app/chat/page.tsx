@@ -40,6 +40,13 @@ interface AgentSource {
     chunkId?: string;
     chunkIndex?: number;
     filename?: string;
+    contentType?: string;
+    mimeType?: string;
+    sourceMimeType?: string;
+    pageStart?: number;
+    pageEnd?: number;
+    startSeconds?: number;
+    endSeconds?: number;
     preview?: string;
     content?: string;
 }
@@ -49,6 +56,12 @@ interface Citation {
     text: string;
     ref: string;
     chunk: string;
+    mimeType?: string;
+    contentType?: string;
+    pageStart?: number;
+    pageEnd?: number;
+    startSeconds?: number;
+    endSeconds?: number;
 }
 
 interface ReasoningStep {
@@ -81,6 +94,34 @@ type ChatStreamEvent =
     | { type: 'text'; token: string }
     | { type: 'answer'; answer: string; sources?: AgentSource[]; sessionId?: string }
     | { type: 'error'; error: string };
+
+function formatTimecode(totalSeconds: number): string {
+    const safe = Math.max(0, Math.floor(totalSeconds));
+    const minutes = Math.floor(safe / 60);
+    const seconds = safe % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatCitationRef(source: AgentSource, index: number): string {
+    if (typeof source.pageStart === 'number') {
+        if (typeof source.pageEnd === 'number' && source.pageEnd !== source.pageStart) {
+            return `Pages ${source.pageStart}-${source.pageEnd}`;
+        }
+        return `Page ${source.pageStart}`;
+    }
+
+    if (typeof source.startSeconds === 'number') {
+        const start = formatTimecode(source.startSeconds);
+        const end = typeof source.endSeconds === 'number' ? formatTimecode(source.endSeconds) : undefined;
+        return end ? `${start}-${end}` : start;
+    }
+
+    if (typeof source.chunkIndex === 'number') {
+        return `Chunk ${source.chunkIndex}`;
+    }
+
+    return `Source ${index + 1}`;
+}
 
 function formatThinkingDetails(step: ChatStreamEvent & { type: 'thinking_step' }): ReasoningStep {
     const stepLabel = step.step.type === 'tool_call'
@@ -290,8 +331,14 @@ export default function ChatPage() {
                             const citations: Citation[] = (parsed.sources || []).map((src, i) => ({
                                 id: i + 1,
                                 text: src.filename || `Source ${i + 1}`,
-                                ref: typeof src.chunkIndex === 'number' ? `Chunk ${src.chunkIndex}` : 'Document',
+                                ref: formatCitationRef(src, i),
                                 chunk: src.preview || src.content || '',
+                                mimeType: src.sourceMimeType || src.mimeType,
+                                contentType: src.contentType,
+                                pageStart: src.pageStart,
+                                pageEnd: src.pageEnd,
+                                startSeconds: src.startSeconds,
+                                endSeconds: src.endSeconds,
                             }));
 
                             setMessages(prev => prev.map(msg => msg.id === thinkingId ? {
@@ -544,7 +591,7 @@ export default function ChatPage() {
                                 <div className="flex flex-col gap-6">
                                     <div className="flex items-start gap-3">
                                         <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
-                                            <FileIcon type={activeCitation.text.includes('wav') ? 'audio' : 'pdf'} size={20} className="text-zinc-600" />
+                                            <FileIcon type={activeCitation.mimeType?.startsWith('audio/') ? 'audio' : activeCitation.mimeType?.startsWith('image/') ? 'image' : 'pdf'} size={20} className="text-zinc-600" />
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-semibold text-zinc-900 truncate max-w-[240px]">{activeCitation.text}</h3>
@@ -552,10 +599,23 @@ export default function ChatPage() {
                                         </div>
                                     </div>
 
+                                    <div className="flex flex-wrap gap-2">
+                                        {activeCitation.contentType && (
+                                            <span className="px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-[10px] font-mono text-zinc-600 uppercase">
+                                                {activeCitation.contentType}
+                                            </span>
+                                        )}
+                                        {activeCitation.mimeType && (
+                                            <span className="px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-[10px] font-mono text-zinc-500">
+                                                {activeCitation.mimeType}
+                                            </span>
+                                        )}
+                                    </div>
+
                                     <div>
                                         <div className="flex items-center gap-2 mb-3">
                                             <Quote size={14} className="text-zinc-400" />
-                                            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-800">Extracted Chunk</span>
+                                            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-800">Evidence Extract</span>
                                         </div>
                                         <p className="relative text-sm text-zinc-700 leading-relaxed font-serif p-3 bg-white border border-zinc-200 shadow-sm rounded-md">
                                             {activeCitation.chunk}

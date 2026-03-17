@@ -13,9 +13,15 @@ export interface AgentSource {
   chunkId?: string;
   chunkIndex?: number;
   filename: string;
+  contentType?: string;
+  mimeType?: string;
+  sourceMimeType?: string;
+  pageStart?: number;
+  pageEnd?: number;
+  startSeconds?: number;
+  endSeconds?: number;
   preview?: string;
   content?: string;
-  mimeType?: string;
 }
 
 function getRawResponseParts(raw: unknown): Array<Record<string, unknown>> | undefined {
@@ -196,6 +202,13 @@ export async function runAgentLoop(
             chunkIndex?: number;
             documentId?: string;
             filename?: string;
+            contentType?: string;
+            mimeType?: string;
+            sourceMimeType?: string;
+            pageStart?: number;
+            pageEnd?: number;
+            startSeconds?: number;
+            endSeconds?: number;
             preview?: string;
           }>;
           results.forEach((r) => {
@@ -206,19 +219,37 @@ export async function runAgentLoop(
               chunkIndex: r.chunkIndex,
               documentId: r.documentId,
               filename: r.filename,
+              contentType: r.contentType,
+              mimeType: r.mimeType,
+              sourceMimeType: r.sourceMimeType,
+              pageStart: typeof r.pageStart === "number" ? r.pageStart : undefined,
+              pageEnd: typeof r.pageEnd === "number" ? r.pageEnd : undefined,
+              startSeconds: typeof r.startSeconds === "number" ? r.startSeconds : undefined,
+              endSeconds: typeof r.endSeconds === "number" ? r.endSeconds : undefined,
               preview: r.preview,
             });
           });
         }
         if (fc.name === "get_document_content" && toolResult.filename) {
+          const toolMetadata = (
+            toolResult.metadata &&
+            typeof toolResult.metadata === "object" &&
+            !Array.isArray(toolResult.metadata)
+          ) ? toolResult.metadata as Record<string, unknown> : undefined;
           const requestedChunkId = typeof fc.args.chunkId === "string" ? fc.args.chunkId : undefined;
           const source: AgentSource = {
             chunkId: requestedChunkId,
             documentId: typeof toolResult.documentId === "string" ? toolResult.documentId : undefined,
             filename: toolResult.filename as string,
+            contentType: typeof toolResult.contentType === "string" ? toolResult.contentType : undefined,
             content: typeof toolResult.content === "string" ? toolResult.content : undefined,
             preview: typeof toolResult.preview === "string" ? toolResult.preview : undefined,
             mimeType: typeof toolResult.mimeType === "string" ? toolResult.mimeType : undefined,
+            sourceMimeType: typeof toolMetadata?.sourceMimeType === "string" ? toolMetadata.sourceMimeType : undefined,
+            pageStart: typeof toolMetadata?.pageStart === "number" ? toolMetadata.pageStart : undefined,
+            pageEnd: typeof toolMetadata?.pageEnd === "number" ? toolMetadata.pageEnd : undefined,
+            startSeconds: typeof toolMetadata?.startSeconds === "number" ? toolMetadata.startSeconds : undefined,
+            endSeconds: typeof toolMetadata?.endSeconds === "number" ? toolMetadata.endSeconds : undefined,
           };
           sourcesMap.set(source.chunkId || source.documentId || source.filename, source);
         }
