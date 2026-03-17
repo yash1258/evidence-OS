@@ -4,7 +4,8 @@ import React from 'react';
 import {
     Database,
     Plus,
-    MoreHorizontal,
+    ArrowUpRight,
+    ScanSearch,
     Lock,
     Settings
 } from 'lucide-react';
@@ -12,11 +13,13 @@ import { cn } from '@/lib/utils';
 import { FileIcon } from './FileIcon';
 
 interface VaultFile {
-    id: number;
+    id: number | string;
     name: string;
     type: string;
     size: string;
     status: string;
+    documentId?: string;
+    summary?: string;
 }
 
 interface ContextSidebarProps {
@@ -25,6 +28,8 @@ interface ContextSidebarProps {
     onNewInvestigation?: () => void;
     onUploadClick?: () => void;
     onSettingsClick?: () => void;
+    onInvestigateFile?: (file: VaultFile) => void;
+    onSummarizeFile?: (file: VaultFile) => void;
     vectorCount?: string;
 }
 
@@ -34,6 +39,8 @@ export const ContextSidebar = ({
     onNewInvestigation, 
     onUploadClick,
     onSettingsClick,
+    onInvestigateFile,
+    onSummarizeFile,
     vectorCount = "24.8M"
 }: ContextSidebarProps) => {
     return (
@@ -85,12 +92,36 @@ export const ContextSidebar = ({
                     <div className="flex flex-col gap-0.5">
                         {vaultFiles.length > 0 ? (
                             vaultFiles.map(file => (
-                                <div key={file.id} className="flex items-center justify-between group px-2 py-1.5 rounded-md hover:bg-zinc-800/50 cursor-pointer">
-                                    <div className="flex items-center gap-2 truncate pr-2">
-                                        <FileIcon type={file.type} size={14} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
-                                        <span className="text-xs text-zinc-400 group-hover:text-zinc-200 truncate">{file.name}</span>
+                                <div key={file.id} className="group px-2 py-2 rounded-md hover:bg-zinc-800/50 transition-colors">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-2 truncate pr-2 min-w-0">
+                                            <FileIcon type={file.type} size={14} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
+                                            <div className="min-w-0">
+                                                <span className="block text-xs text-zinc-400 group-hover:text-zinc-200 truncate">{file.name}</span>
+                                                {file.summary && (
+                                                    <span className="block text-[10px] text-zinc-600 truncate mt-0.5">{file.summary}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => onSummarizeFile?.(file)}
+                                                className="w-6 h-6 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors flex items-center justify-center"
+                                                title="Summarize file"
+                                                aria-label={`Summarize ${file.name}`}
+                                            >
+                                                <ScanSearch size={12} />
+                                            </button>
+                                            <button
+                                                onClick={() => onInvestigateFile?.(file)}
+                                                className="w-6 h-6 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors flex items-center justify-center"
+                                                title="Investigate file"
+                                                aria-label={`Investigate ${file.name}`}
+                                            >
+                                                <ArrowUpRight size={12} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <MoreHorizontal size={14} className="text-zinc-600 opacity-0 group-hover:opacity-100 shrink-0" />
                                 </div>
                             ))
                         ) : (

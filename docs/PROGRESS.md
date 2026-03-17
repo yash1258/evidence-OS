@@ -134,13 +134,24 @@ What improved:
 
 ### Investigation history workflow
 
-- pending commit in current branch
+- `e099260` Add investigations history workspace
 
 What improved:
 
 - the app now has a dedicated investigations/history screen
 - persisted sessions can be reopened directly
 - dashboard and chat now point to a real investigation workspace instead of the generic chat route
+
+
+### File-scoped investigation actions
+
+- pending commit in current branch
+
+What improved:
+
+- files in the chat sidebar can now launch real actions
+- users can summarize or investigate a file directly from vault context
+- the app is moving from generic prompting toward context-driven workflows
 
 
 ## Current Focus
@@ -226,3 +237,7 @@ Current UI refinement:
 Current workflow refinement:
 
 - turn persisted investigations into a first-class workspace
+
+Current context refinement:
+
+- turn vault file lists into active entry points for investigation

@@ -24,11 +24,13 @@ import { ContextSidebar } from '@/components/Shared/ContextSidebar';
 // --- TYPES ---
 
 interface VaultFile {
-    id: number;
+    id: number | string;
     name: string;
     type: string;
     size: string;
     status: string;
+    documentId?: string;
+    summary?: string;
 }
 
 interface Vault {
@@ -103,6 +105,7 @@ interface GraphNodeResponse {
     vaultId?: string | null;
     properties?: {
         size?: string;
+        summary?: string;
     };
 }
 
@@ -292,11 +295,13 @@ export default function ChatPage() {
                     (activeVaultId === 'global' ? !node.vaultId : node.vaultId === activeVaultId)
                 );
                 const docs = filteredNodes.map((node, i) => ({
-                        id: i + 1,
+                        id: node.id || i + 1,
                         name: node.label || node.id,
                         type: node.type === 'audio' ? 'audio' : node.type === 'image' ? 'image' : 'pdf',
                         size: node.properties?.size || 'N/A',
                         status: 'indexed',
+                        documentId: node.id,
+                        summary: typeof node.properties?.summary === 'string' ? node.properties.summary : undefined,
                     }));
                 setVaultFiles(docs);
             }
@@ -473,6 +478,20 @@ export default function ChatPage() {
         await submitMessage(prompt);
     };
 
+    const handleSummarizeFile = async (file: VaultFile) => {
+        const prompt = file.documentId
+            ? `Summarize the document "${file.name}" in detail. Document ID: ${file.documentId}.`
+            : `Summarize the file "${file.name}" in detail.`;
+        await submitMessage(prompt);
+    };
+
+    const handleInvestigateFile = async (file: VaultFile) => {
+        const prompt = file.documentId
+            ? `Investigate the document "${file.name}". Explain what it is about, key claims, important entities, and any links or contradictions it may have. Document ID: ${file.documentId}.`
+            : `Investigate the file "${file.name}" and explain what it is about, including key claims and relevant evidence.`;
+        await submitMessage(prompt);
+    };
+
     return (
         <div className="flex h-[100dvh] bg-white font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
             <style dangerouslySetInnerHTML={{
@@ -500,6 +519,8 @@ export default function ChatPage() {
                 }}
                 onUploadClick={() => fileInputRef.current?.click()}
                 onSettingsClick={() => router.push('/settings')}
+                onSummarizeFile={handleSummarizeFile}
+                onInvestigateFile={handleInvestigateFile}
                 vectorCount={graphStats?.nodeCount?.toString()}
             />
 
