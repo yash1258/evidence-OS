@@ -66,10 +66,11 @@ export async function GET(request: Request) {
     // Edges by type
     if (mode === "edges") {
       const edgeType = searchParams.get("type");
+      const vaultId = searchParams.get("vaultId") || undefined;
       if (!edgeType) {
         return NextResponse.json({ error: "type parameter required" }, { status: 400 });
       }
-      const edges = getEdgesByType(edgeType);
+      const edges = getEdgesByType(edgeType, 0.0, vaultId);
       return NextResponse.json({ type: edgeType, edges });
     }
 

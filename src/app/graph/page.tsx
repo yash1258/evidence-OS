@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Activity,
     ArrowRight,
+    AlertTriangle,
     Database,
     Folder,
     GitBranch,
@@ -46,6 +48,7 @@ interface SubgraphResponse {
 }
 
 export default function GraphPage() {
+    const router = useRouter();
     const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
     const [stats, setStats] = useState<GraphStatsResponse | null>(null);
     const [spaces, setSpaces] = useState<GraphSpace[]>([]);
@@ -139,6 +142,12 @@ export default function GraphPage() {
                                 Inspect how vaults, documents, chunks, entities, and investigations are actually connected. This page is wired to the live graph API rather than demo data.
                             </p>
                         </div>
+                        <button
+                            onClick={() => router.push(nodeId ? `/contradictions?vault=${encodeURIComponent(nodeId)}` : '/contradictions')}
+                            className="rounded-xl border border-zinc-200 bg-white text-zinc-700 px-4 py-3 text-sm font-medium hover:border-orange-300 transition-colors flex items-center gap-2"
+                        >
+                            <AlertTriangle size={14} /> Compare Contradictions
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -145,13 +145,24 @@ What improved:
 
 ### File-scoped investigation actions
 
-- pending commit in current branch
+- `bad3400` Add file-scoped investigation actions
 
 What improved:
 
 - files in the chat sidebar can now launch real actions
 - users can summarize or investigate a file directly from vault context
 - the app is moving from generic prompting toward context-driven workflows
+
+
+### Contradiction comparison and document inspection
+
+- pending commit in current branch
+
+What improved:
+
+- contradictions now have a dedicated comparison workspace
+- documents now have a dedicated inspector page
+- file rows now lead into a deeper inspection workflow instead of only quick actions
 
 
 ## Current Focus
@@ -241,3 +252,7 @@ Current workflow refinement:
 Current context refinement:
 
 - turn vault file lists into active entry points for investigation
+
+Current analysis refinement:
+
+- make contradictions and document structure inspectable as first-class surfaces

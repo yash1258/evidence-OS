@@ -28,6 +28,7 @@ interface ContextSidebarProps {
     onNewInvestigation?: () => void;
     onUploadClick?: () => void;
     onSettingsClick?: () => void;
+    onOpenFile?: (file: VaultFile) => void;
     onInvestigateFile?: (file: VaultFile) => void;
     onSummarizeFile?: (file: VaultFile) => void;
     vectorCount?: string;
@@ -39,6 +40,7 @@ export const ContextSidebar = ({
     onNewInvestigation, 
     onUploadClick,
     onSettingsClick,
+    onOpenFile,
     onInvestigateFile,
     onSummarizeFile,
     vectorCount = "24.8M"
@@ -94,7 +96,10 @@ export const ContextSidebar = ({
                             vaultFiles.map(file => (
                                 <div key={file.id} className="group px-2 py-2 rounded-md hover:bg-zinc-800/50 transition-colors">
                                     <div className="flex items-start justify-between gap-2">
-                                        <div className="flex items-center gap-2 truncate pr-2 min-w-0">
+                                        <button
+                                            onClick={() => onOpenFile?.(file)}
+                                            className="flex items-center gap-2 truncate pr-2 min-w-0 text-left"
+                                        >
                                             <FileIcon type={file.type} size={14} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
                                             <div className="min-w-0">
                                                 <span className="block text-xs text-zinc-400 group-hover:text-zinc-200 truncate">{file.name}</span>
@@ -102,7 +107,7 @@ export const ContextSidebar = ({
                                                     <span className="block text-[10px] text-zinc-600 truncate mt-0.5">{file.summary}</span>
                                                 )}
                                             </div>
-                                        </div>
+                                        </button>
                                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => onSummarizeFile?.(file)}

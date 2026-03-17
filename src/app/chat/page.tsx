@@ -519,6 +519,11 @@ export default function ChatPage() {
                 }}
                 onUploadClick={() => fileInputRef.current?.click()}
                 onSettingsClick={() => router.push('/settings')}
+                onOpenFile={(file) => {
+                    if (file.documentId) {
+                        router.push(`/documents/${encodeURIComponent(file.documentId)}`);
+                    }
+                }}
                 onSummarizeFile={handleSummarizeFile}
                 onInvestigateFile={handleInvestigateFile}
                 vectorCount={graphStats?.nodeCount?.toString()}

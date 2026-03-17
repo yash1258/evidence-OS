@@ -492,12 +492,20 @@ export default function Dashboard() {
                         <motion.div variants={itemVariants} className="lg:col-span-2 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Recent Investigations</h2>
-                                <button
-                                    onClick={() => router.push('/investigations')}
-                                    className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
-                                >
-                                    View History <ArrowUpRight size={12} />
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => router.push(activeScope !== 'all' ? `/contradictions?vault=${encodeURIComponent(activeScope)}` : '/contradictions')}
+                                        className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
+                                    >
+                                        Compare Conflicts <ArrowUpRight size={12} />
+                                    </button>
+                                    <button
+                                        onClick={() => router.push('/investigations')}
+                                        className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
+                                    >
+                                        View History <ArrowUpRight size={12} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-sm flex flex-col overflow-hidden">
