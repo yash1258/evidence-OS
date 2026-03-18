@@ -13,6 +13,7 @@ import {
     Search,
 } from "lucide-react";
 import { NavSidebar } from "@/components/Shared/NavSidebar";
+import { ThemedSelect } from "@/components/Shared/ThemedSelect";
 
 interface GraphStatsResponse {
     nodeCount: number;
@@ -115,17 +116,6 @@ export default function GraphPage() {
 
     return (
         <div className="flex h-[100dvh] bg-zinc-50 font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.3); border-radius: 10px; }
-      `,
-            }} />
-
             <NavSidebar
                 nodeCount={stats?.nodeCount}
                 isOpen={isNavSidebarOpen}
@@ -185,15 +175,17 @@ export default function GraphPage() {
                                     placeholder="Enter a node ID or vault ID"
                                     className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800 outline-none focus:border-orange-300 focus:bg-white"
                                 />
-                                <select
+                                <ThemedSelect
                                     value={depth}
-                                    onChange={(event) => setDepth(event.target.value)}
-                                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800 outline-none focus:border-orange-300 focus:bg-white"
-                                >
-                                    <option value="1">Depth 1</option>
-                                    <option value="2">Depth 2</option>
-                                    <option value="3">Depth 3</option>
-                                </select>
+                                    onChange={setDepth}
+                                    options={[
+                                        { value: "1", label: "Depth 1", description: "Immediate neighbors" },
+                                        { value: "2", label: "Depth 2", description: "Broader context" },
+                                        { value: "3", label: "Depth 3", description: "Wide exploration" },
+                                    ]}
+                                    buttonClassName="h-[48px] justify-between px-4 min-w-[120px] bg-[rgba(255,250,243,0.9)]"
+                                    minMenuWidthClassName="min-w-[180px]"
+                                />
                                 <button
                                     onClick={() => loadSubgraph()}
                                     className="rounded-xl bg-zinc-900 text-white px-4 py-3 text-sm font-medium hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"

@@ -288,39 +288,28 @@ export default function VaultsPage() {
     };
 
     return (
-        <div className="flex h-[100dvh] bg-zinc-50 font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.32); border-radius: 10px; }
-      `,
-            }} />
-
+        <div className="app-shell flex h-[100dvh] font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
             <NavSidebar
                 nodeCount={graphNodeCount}
                 isOpen={isNavSidebarOpen}
                 onToggle={() => setIsNavSidebarOpen((open) => !open)}
             />
 
-            <main className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-50/70">
+            <main className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-[1360px] mx-auto px-6 py-8 flex flex-col gap-8">
                     <div className="flex items-start justify-between gap-6">
                         <div>
-                            <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500 font-mono mb-3">Vault Command Center</p>
+                            <p className="app-kicker text-[11px] uppercase font-mono mb-3">Vault Command Center</p>
                             <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Knowledge Vault</h1>
-                            <p className="mt-2 max-w-3xl text-sm text-zinc-500 leading-relaxed">
+                            <p className="mt-2 max-w-3xl text-sm text-stone-600 leading-relaxed">
                                 Manage vaults as first-class memory objects. Inspect their source mix, freshness, and quick paths into chat, graph exploration, contradictions, and source inspection.
                             </p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                            <button onClick={() => setIsCreateVaultModalOpen(true)} className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 hover:border-zinc-300 transition-colors flex items-center gap-2">
+                            <button onClick={() => setIsCreateVaultModalOpen(true)} className="app-button-secondary rounded-xl px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2">
                                 <FolderPlus size={14} /> Create Vault
                             </button>
-                            <button onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 hover:border-zinc-300 transition-colors flex items-center gap-2">
+                            <button onClick={() => fileInputRef.current?.click()} className="app-button-secondary rounded-xl px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2">
                                 <Upload size={14} /> Upload File
                             </button>
                             <button
@@ -328,33 +317,33 @@ export default function VaultsPage() {
                                     setImportError("");
                                     setIsImportModalOpen(true);
                                 }}
-                                className="rounded-xl bg-zinc-900 text-white px-4 py-3 text-sm font-medium hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                                className="app-button-primary rounded-xl px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2"
                             >
                                 <Link2 size={14} /> Import URL
                             </button>
                         </div>
                     </div>
 
-                    <div className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm">
+                    <div className="app-panel rounded-[2rem] p-4 shadow-sm">
                         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
-                            <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-                                <Search size={16} className="text-zinc-400 shrink-0" />
+                            <div className="app-panel-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                                <Search size={16} className="text-stone-400 shrink-0" />
                                 <input
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
                                     placeholder="Search vaults by name, themes, or overview"
-                                    className="w-full bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400"
+                                    className="w-full bg-transparent text-sm text-zinc-800 outline-none placeholder:text-stone-400"
                                 />
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-[11px] font-mono uppercase tracking-wider text-zinc-500">{spaces.length} vaults</span>
-                                <span className="px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-[11px] font-mono uppercase tracking-wider text-zinc-500">{graphNodeCount ?? "—"} nodes</span>
+                                <span className="app-chip px-3 py-2 rounded-xl text-[11px] font-mono uppercase tracking-wider">{spaces.length} vaults</span>
+                                <span className="app-chip px-3 py-2 rounded-xl text-[11px] font-mono uppercase tracking-wider">{graphNodeCount ?? "—"} nodes</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
-                        <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
+                        <div className="app-panel rounded-[2rem] p-5 shadow-sm">
                             <div className="flex items-center gap-2 mb-4">
                                 <Layers3 size={16} className="text-orange-500" />
                                 <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Vault Registry</h2>
@@ -369,19 +358,19 @@ export default function VaultsPage() {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.03 }}
                                             onClick={() => setSelectedVaultId(space.id)}
-                                            className={`relative overflow-hidden rounded-[1.75rem] border p-5 text-left transition-all ${isActive ? "border-orange-300 bg-orange-50/50 shadow-[0_10px_30px_-18px_rgba(249,115,22,0.35)]" : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-[0_10px_30px_-20px_rgba(24,24,27,0.18)]"}`}
+                                            className={`relative overflow-hidden rounded-[1.75rem] border p-5 text-left transition-all ${isActive ? "border-orange-300 bg-orange-50/50 shadow-[0_10px_30px_-18px_rgba(249,115,22,0.35)]" : "app-panel hover:border-orange-200 hover:shadow-[0_14px_34px_-24px_rgba(77,52,22,0.24)]"}`}
                                         >
                                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.08),transparent_45%)] pointer-events-none" />
                                             <div className="relative z-10">
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <div className={`h-9 w-9 rounded-2xl border flex items-center justify-center ${isActive ? "border-orange-200 bg-white text-orange-700" : "border-zinc-200 bg-zinc-50 text-zinc-600"}`}>
+                                                            <div className={`h-9 w-9 rounded-2xl border flex items-center justify-center ${isActive ? "border-orange-200 bg-white text-orange-700" : "border-orange-100/80 bg-orange-50/80 text-orange-700"}`}>
                                                                 <Database size={16} />
                                                             </div>
                                                             <div className="min-w-0">
                                                                 <h3 className="text-sm font-semibold text-zinc-950 truncate">{space.name}</h3>
-                                                                <p className="text-[11px] font-mono text-zinc-500 mt-0.5">{space.size}</p>
+                                                                <p className="text-[11px] font-mono text-stone-500 mt-0.5">{space.size}</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -392,17 +381,17 @@ export default function VaultsPage() {
                                                     )}
                                                 </div>
 
-                                                <p className="mt-4 text-sm text-zinc-600 leading-relaxed line-clamp-3">
+                                                <p className="mt-4 text-sm text-stone-600 leading-relaxed line-clamp-3">
                                                     {space.overview || "No vault overview generated yet. Import sources or run a project-wide summary to build one."}
                                                 </p>
 
                                                 <div className="mt-4 flex flex-wrap gap-2">
                                                     {(space.overviewStats?.keyThemes || []).slice(0, 2).map((theme) => (
-                                                        <span key={theme} className="px-2.5 py-1 rounded-full bg-zinc-50 border border-zinc-200 text-[11px] text-zinc-600">{theme}</span>
+                                                        <span key={theme} className="app-chip px-2.5 py-1 rounded-full text-[11px]">{theme}</span>
                                                     ))}
                                                 </div>
 
-                                                <div className="mt-5 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                                                <div className="mt-5 flex items-center justify-between text-[11px] font-mono text-stone-500">
                                                     <span className="flex items-center gap-1.5"><Clock3 size={11} /> {space.lastSync}</span>
                                                     <span>{space.chunks} chunks</span>
                                                 </div>
@@ -414,28 +403,28 @@ export default function VaultsPage() {
                         </div>
 
                         {selectedVault && (
-                            <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
+                            <div className="app-panel rounded-[2rem] p-5 shadow-sm">
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
-                                        <p className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Selected Vault</p>
+                                        <p className="app-kicker text-[11px] font-mono uppercase">Selected Vault</p>
                                         <h2 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950">{selectedVault.name}</h2>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/chat?vault=${encodeURIComponent(selectedVault.id)}` : "/chat")} className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-800 transition-colors">Open Chat</button>
-                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/graph?vault=${encodeURIComponent(selectedVault.id)}` : "/graph")} className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors">Graph</button>
-                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/contradictions?vault=${encodeURIComponent(selectedVault.id)}` : "/contradictions")} className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors">Contradictions</button>
+                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/chat?vault=${encodeURIComponent(selectedVault.id)}` : "/chat")} className="app-button-primary rounded-xl px-3 py-2 text-xs font-medium transition-colors">Open Chat</button>
+                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/graph?vault=${encodeURIComponent(selectedVault.id)}` : "/graph")} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors">Graph</button>
+                                        <button onClick={() => router.push(selectedVault.id !== "global" ? `/contradictions?vault=${encodeURIComponent(selectedVault.id)}` : "/contradictions")} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors">Contradictions</button>
                                     </div>
                                 </div>
 
-                                <p className="mt-4 text-sm text-zinc-600 leading-relaxed">
+                                <p className="mt-4 text-sm text-stone-600 leading-relaxed">
                                     {selectedVault.overview || "This vault is ready for source ingestion. Add files or imports, then ask the agent for a project-wide summary to build overview memory."}
                                 </p>
 
                                 <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Documents</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.documents}</div></div>
-                                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Audio</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.audio}</div></div>
-                                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Images</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.images}</div></div>
-                                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">URL Imports</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.imports}</div></div>
+                                    <div className="app-panel-soft rounded-2xl p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-stone-500">Documents</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.documents}</div></div>
+                                    <div className="app-panel-soft rounded-2xl p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-stone-500">Audio</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.audio}</div></div>
+                                    <div className="app-panel-soft rounded-2xl p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-stone-500">Images</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.images}</div></div>
+                                    <div className="app-panel-soft rounded-2xl p-4"><div className="text-[11px] font-mono uppercase tracking-wider text-stone-500">URL Imports</div><div className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">{selectedSourceStats.imports}</div></div>
                                 </div>
 
                                 <div className="mt-5 flex flex-wrap gap-2">
@@ -443,13 +432,13 @@ export default function VaultsPage() {
                                         <span key={theme} className="px-3 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-xs text-orange-700">{theme}</span>
                                     ))}
                                     {(selectedVault.overviewStats?.followUpQuestions || []).slice(0, 1).map((question) => (
-                                        <button key={question} onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(question)}`)} className="px-3 py-1.5 rounded-full bg-white border border-zinc-200 text-xs text-zinc-600 hover:border-orange-300 hover:text-orange-700 transition-colors">
+                                        <button key={question} onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(question)}`)} className="app-chip px-3 py-1.5 rounded-full text-xs hover:border-orange-300 hover:text-orange-700 transition-colors">
                                             {question}
                                         </button>
                                     ))}
                                 </div>
 
-                                <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+                                <div className="app-panel-soft mt-6 rounded-2xl p-4">
                                     {uploadStatus === "uploading" ? (
                                         <div className="flex items-center gap-3 text-sm text-zinc-700"><Upload size={16} className="text-orange-500" />Ingesting {uploadFileName} into {selectedVault.name}...</div>
                                     ) : uploadStatus === "success" ? (
@@ -458,9 +447,9 @@ export default function VaultsPage() {
                                         <div className="flex items-center gap-3 text-sm text-red-700"><AlertTriangle size={16} />{uploadError}</div>
                                     ) : (
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <button onClick={() => fileInputRef.current?.click()} className="rounded-xl bg-white border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors flex items-center gap-2"><Upload size={13} /> Add File</button>
-                                            <button onClick={() => { setImportError(""); setIsImportModalOpen(true); }} className="rounded-xl bg-white border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors flex items-center gap-2"><Youtube size={13} /> Import YouTube</button>
-                                            <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent("What is this whole project about?")}`)} className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-800 transition-colors flex items-center gap-2"><ScanSearch size={13} /> Refresh via Chat</button>
+                                            <button onClick={() => fileInputRef.current?.click()} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2"><Upload size={13} /> Add File</button>
+                                            <button onClick={() => { setImportError(""); setIsImportModalOpen(true); }} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2"><Youtube size={13} /> Import YouTube</button>
+                                            <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent("What is this whole project about?")}`)} className="app-button-primary rounded-xl px-3 py-2 text-xs font-medium transition-colors flex items-center gap-2"><ScanSearch size={13} /> Refresh via Chat</button>
                                         </div>
                                     )}
                                 </div>
@@ -469,14 +458,14 @@ export default function VaultsPage() {
                     </div>
 
                     {selectedVault && (
-                        <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
+                        <div className="app-panel rounded-[2rem] p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <FileText size={16} className="text-orange-500" />
                                         <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Source Browser</h2>
                                     </div>
-                                    <p className="mt-1 text-sm text-zinc-500">Browse this vault’s sources and jump straight into file-level investigations.</p>
+                                    <p className="mt-1 text-sm text-stone-600">Browse this vault’s sources and jump straight into file-level investigations.</p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {[
@@ -492,7 +481,7 @@ export default function VaultsPage() {
                                             <button
                                                 key={filter.id}
                                                 onClick={() => setSourceFilter(filter.id as SourceFilter)}
-                                                className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors flex items-center gap-1.5 ${active ? "bg-zinc-900 border-zinc-900 text-white" : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"}`}
+                                                className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors flex items-center gap-1.5 ${active ? "app-button-primary border-transparent" : "app-chip hover:border-orange-200"}`}
                                             >
                                                 <Icon size={12} /> {filter.label}
                                             </button>
@@ -503,10 +492,10 @@ export default function VaultsPage() {
 
                             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {selectedSources.length === 0 ? (
-                                    <div className="col-span-full rounded-[1.5rem] border border-dashed border-zinc-200 bg-zinc-50 p-10 text-center">
-                                        <Database size={24} className="mx-auto text-zinc-400 mb-3" />
+                                    <div className="col-span-full rounded-[1.5rem] border border-dashed border-stone-200 bg-[rgba(255,248,239,0.75)] p-10 text-center">
+                                        <Database size={24} className="mx-auto text-stone-400 mb-3" />
                                         <p className="text-sm font-medium text-zinc-700">No sources in this filter yet</p>
-                                        <p className="mt-1 text-xs text-zinc-500">Upload files or import a YouTube transcript into this vault.</p>
+                                        <p className="mt-1 text-xs text-stone-500">Upload files or import a YouTube transcript into this vault.</p>
                                     </div>
                                 ) : (
                                     selectedSources.map((source, index) => (
@@ -515,29 +504,29 @@ export default function VaultsPage() {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.02 }}
-                                            className="rounded-[1.5rem] border border-zinc-200 bg-zinc-50/70 p-4 hover:border-zinc-300 hover:bg-white transition-colors"
+                                            className="app-panel-soft rounded-[1.5rem] p-4 hover:border-orange-200 hover:bg-[rgba(255,252,247,0.96)] transition-colors"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="h-9 w-9 rounded-2xl border border-zinc-200 bg-white flex items-center justify-center shrink-0">
-                                                            <FileIcon type={inferFileKind(source)} size={16} className="text-zinc-600" />
+                                                        <div className="h-9 w-9 rounded-2xl border border-orange-100/80 bg-white flex items-center justify-center shrink-0">
+                                                            <FileIcon type={inferFileKind(source)} size={16} className="text-orange-700" />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <h3 className="text-sm font-semibold text-zinc-900 truncate">{source.name}</h3>
-                                                            <p className="text-[11px] font-mono text-zinc-500 mt-0.5">{source.sourceType === "youtube" ? "youtube import" : source.type}</p>
+                                                            <p className="text-[11px] font-mono text-stone-500 mt-0.5">{source.sourceType === "youtube" ? "youtube import" : source.type}</p>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span className="px-2 py-1 rounded-md bg-white border border-zinc-200 text-[10px] font-mono text-zinc-500">{source.mimeType || source.contentType || source.type}</span>
+                                                <span className="app-chip px-2 py-1 rounded-md text-[10px] font-mono">{source.mimeType || source.contentType || source.type}</span>
                                             </div>
 
-                                            <p className="mt-4 text-sm leading-relaxed text-zinc-600 line-clamp-3">{source.summary || "No source summary generated yet."}</p>
+                                            <p className="mt-4 text-sm leading-relaxed text-stone-600 line-clamp-3">{source.summary || "No source summary generated yet."}</p>
 
                                             <div className="mt-4 flex items-center gap-2 flex-wrap">
-                                                <button onClick={() => router.push(`/documents/${encodeURIComponent(source.id)}`)} className="rounded-xl bg-white border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors">Inspect</button>
-                                                <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(`Summarize the document "${source.name}" in detail. Document ID: ${source.id}.`)}`)} className="rounded-xl bg-white border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 hover:border-zinc-300 transition-colors">Summarize</button>
-                                                <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(`Investigate the document "${source.name}". Explain what it is about, key claims, important entities, and any links or contradictions it may have. Document ID: ${source.id}.`)}`)} className="rounded-xl bg-zinc-900 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-800 transition-colors flex items-center gap-1.5">Investigate <ArrowRight size={12} /></button>
+                                                <button onClick={() => router.push(`/documents/${encodeURIComponent(source.id)}`)} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors">Inspect</button>
+                                                <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(`Summarize the document "${source.name}" in detail. Document ID: ${source.id}.`)}`)} className="app-button-secondary rounded-xl px-3 py-2 text-xs font-medium transition-colors">Summarize</button>
+                                                <button onClick={() => router.push(`/chat?vault=${encodeURIComponent(selectedVault.id)}&q=${encodeURIComponent(`Investigate the document "${source.name}". Explain what it is about, key claims, important entities, and any links or contradictions it may have. Document ID: ${source.id}.`)}`)} className="app-button-primary rounded-xl px-3 py-2 text-xs font-medium transition-colors flex items-center gap-1.5">Investigate <ArrowRight size={12} /></button>
                                             </div>
                                         </motion.div>
                                     ))
@@ -558,22 +547,22 @@ export default function VaultsPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 10 }}
                             transition={spring}
-                            className="w-[420px] max-w-[92vw] rounded-[1.75rem] border border-zinc-200 bg-white p-6 shadow-xl"
+                            className="app-panel w-[420px] max-w-[92vw] rounded-[1.75rem] p-6 shadow-xl"
                         >
-                            <p className="text-[11px] font-mono uppercase tracking-[0.24em] text-zinc-500">Create Vault</p>
+                            <p className="app-kicker text-[11px] font-mono uppercase">Create Vault</p>
                             <h3 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">New Knowledge Vault</h3>
-                            <p className="mt-2 text-sm text-zinc-500">Create a new project scope, then add sources and start building memory.</p>
+                            <p className="mt-2 text-sm text-stone-600">Create a new project scope, then add sources and start building memory.</p>
                             <form onSubmit={handleCreateVault} className="mt-5 flex flex-col gap-4">
                                 <input
                                     value={newVaultName}
                                     onChange={(event) => setNewVaultName(event.target.value)}
                                     placeholder="Example: Learn Context Graphs"
-                                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800 outline-none focus:border-orange-300 focus:bg-white"
+                                    className="w-full rounded-2xl border border-stone-200 bg-[rgba(255,250,243,0.9)] px-4 py-3 text-sm text-zinc-800 outline-none focus:border-orange-300 focus:bg-white"
                                     autoFocus
                                 />
                                 <div className="flex items-center justify-end gap-3">
-                                    <button type="button" onClick={() => setIsCreateVaultModalOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100">Cancel</button>
-                                    <MagneticButton type="submit" disabled={!newVaultName.trim()} className="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Create Vault</MagneticButton>
+                                    <button type="button" onClick={() => setIsCreateVaultModalOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-stone-500 hover:bg-orange-50">Cancel</button>
+                                    <MagneticButton type="submit" disabled={!newVaultName.trim()} className="app-button-primary rounded-xl px-4 py-2 text-xs font-semibold disabled:opacity-50">Create Vault</MagneticButton>
                                 </div>
                             </form>
                         </motion.div>

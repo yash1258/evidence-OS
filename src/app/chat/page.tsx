@@ -20,9 +20,11 @@ import { FileIcon } from '@/components/Shared/FileIcon';
 import { DynamicThinkingState } from '@/components/Shared/DynamicThinkingState';
 import { AgentReasoningBlock } from '@/components/Shared/AgentReasoningBlock';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
-import { ContextSidebar } from '@/components/Shared/ContextSidebar';
+import { StyledResponseText } from '@/components/Shared/StyledResponseText';
+import { ThemedSelect } from '@/components/Shared/ThemedSelect';
 import { ToastStack, useToastStack } from '@/components/Shared/ToastStack';
 import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
+import { VaultContextPanel } from '@/components/Shared/VaultContextPanel';
 import { getNoticeFromError } from '@/lib/ui/errorNotice';
 
 // --- TYPES ---
@@ -83,6 +85,9 @@ interface ReasoningStep {
     step: string;
     details: string;
     time: string;
+    kind?: 'tool_call' | 'tool_result' | 'thinking';
+    toolName?: string;
+    payload?: unknown;
 }
 
 interface Message {
@@ -151,22 +156,51 @@ function formatCitationRef(source: AgentSource, index: number): string {
     return `Source ${index + 1}`;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+    }
+
+    return value as Record<string, unknown>;
+}
+
 function formatThinkingDetails(step: ChatStreamEvent & { type: 'thinking_step' }): ReasoningStep {
+    const payload = step.step.type === 'tool_call' ? step.step.toolArgs : step.step.result;
+    const payloadRecord = asRecord(payload);
+
     const stepLabel = step.step.type === 'tool_call'
         ? `Action: ${step.step.toolName || 'Reasoning'}`
         : step.step.type === 'tool_result'
         ? `Result: ${step.step.toolName || 'Observation'}`
         : 'Reasoning';
 
-    const detailsSource = step.step.type === 'tool_call' ? step.step.toolArgs : step.step.result;
-    const details = detailsSource
-        ? JSON.stringify(detailsSource).slice(0, 240)
-        : 'Working through the next step.';
+    let details = 'Working through the next step.';
+
+    if (step.step.type === 'tool_result' && step.step.toolName === 'agent_route' && payloadRecord) {
+        details = payloadRecord.path === 'parallel'
+            ? 'Routed into the parallel investigation runtime.'
+            : 'Kept this answer on the direct Gemini path.';
+    } else if (step.step.type === 'tool_result' && step.step.toolName?.startsWith('worker_') && typeof payloadRecord?.summary === 'string') {
+        details = payloadRecord.summary;
+    } else if (step.step.type === 'tool_result' && step.step.toolName === 'gather_search_context' && Array.isArray(payloadRecord?.results)) {
+        details = `Retrieved ${payloadRecord.results.length} relevant evidence slices from the active vault.`;
+    } else if (step.step.type === 'tool_result' && step.step.toolName === 'gather_contradictions' && Array.isArray(payloadRecord?.contradictions)) {
+        details = `Reviewed ${payloadRecord.contradictions.length} contradiction or support signals.`;
+    } else if (step.step.type === 'tool_result' && step.step.toolName === 'gather_project_overview' && typeof payloadRecord?.totalDocuments === 'number') {
+        details = `Mapped the project shape across ${payloadRecord.totalDocuments} indexed documents.`;
+    } else if (typeof payload === 'string' && payload.trim()) {
+        details = payload.slice(0, 240);
+    } else if (payload) {
+        details = JSON.stringify(payload).slice(0, 240);
+    }
 
     return {
         step: stepLabel,
         details,
         time: '~',
+        kind: step.step.type as 'tool_call' | 'tool_result' | 'thinking',
+        toolName: step.step.toolName,
+        payload,
     };
 }
 
@@ -177,6 +211,7 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
     const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
+    const [isContextSidebarOpen, setIsContextSidebarOpen] = useState(false);
     const [isInspectorOpen, setIsInspectorOpen] = useState(false);
     const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -213,11 +248,19 @@ export default function ChatPage() {
         if (stored !== null) {
             setIsNavSidebarOpen(stored === 'true');
         }
+        const contextStored = window.localStorage.getItem('evidenceos.context-sidebar-open');
+        if (contextStored !== null) {
+            setIsContextSidebarOpen(contextStored === 'true');
+        }
     }, []);
 
     useEffect(() => {
         window.localStorage.setItem('evidenceos.nav-sidebar-open', String(isNavSidebarOpen));
     }, [isNavSidebarOpen]);
+
+    useEffect(() => {
+        window.localStorage.setItem('evidenceos.context-sidebar-open', String(isContextSidebarOpen));
+    }, [isContextSidebarOpen]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -549,44 +592,12 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex h-[100dvh] bg-white font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.4); border-radius: 10px; }
-      `}} />
-
+        <div className="app-shell flex h-[100dvh] font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
             {/* Leftmost Navigation */}
             <NavSidebar
                 nodeCount={graphStats?.nodeCount}
                 isOpen={isNavSidebarOpen}
                 onToggle={() => setIsNavSidebarOpen((open) => !open)}
-            />
-
-            {/* Secondary Context Sidebar */}
-            <ContextSidebar 
-                vaultFiles={vaultFiles} 
-                onNewInvestigation={() => {
-                    router.push('/investigations');
-                }}
-                onUploadClick={() => fileInputRef.current?.click()}
-                onImportUrlClick={() => {
-                    setImportError("");
-                    setIsImportModalOpen(true);
-                }}
-                onSettingsClick={() => router.push('/settings')}
-                onOpenFile={(file) => {
-                    if (file.documentId) {
-                        router.push(`/documents/${encodeURIComponent(file.documentId)}`);
-                    }
-                }}
-                onSummarizeFile={handleSummarizeFile}
-                onInvestigateFile={handleInvestigateFile}
-                vectorCount={graphStats?.nodeCount?.toString()}
             />
 
             <input 
@@ -598,63 +609,98 @@ export default function ChatPage() {
             />
 
             {/* Main Chat Area */}
-            <main className="flex-1 flex flex-col bg-zinc-50 relative min-w-0 transition-all duration-300">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+            <main className="flex-1 flex flex-col relative min-w-0 transition-all duration-300">
+                <div className="app-page-grid absolute inset-0 bg-[size:24px_24px] pointer-events-none opacity-60" />
 
-                <header className="h-14 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 flex items-center justify-between px-6 sticky top-0 z-10">
+                <header className="app-toolbar h-14 flex items-center justify-between px-6 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
                         <h1 className="text-sm font-semibold text-zinc-800 truncate">Agentic Investigation</h1>
-                        <span className="px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-[10px] font-mono text-zinc-500">Active Session</span>
+                        <span className="app-chip px-2 py-0.5 rounded-md text-[10px] font-mono">Active Session</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center bg-zinc-100 border border-zinc-200 rounded-md p-1 shadow-sm shrink-0">
-                            <span className="text-[10px] uppercase font-mono text-zinc-500 px-2 font-semibold">Active Vault:</span>
-                            <select
-                                value={activeVaultId}
-                                onChange={(e) => setActiveVaultId(e.target.value)}
-                                className="text-xs font-medium text-zinc-900 bg-transparent border-none outline-none py-0.5 cursor-pointer min-w-[120px]"
-                            >
-                                <option value="global">Global Namespace</option>
-                                {vaults.map(v => (
-                                    <option key={v.id} value={v.id}>{v.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="w-px h-4 bg-zinc-200" />
+                        <ThemedSelect
+                            label="Active Vault"
+                            value={activeVaultId}
+                            onChange={setActiveVaultId}
+                            options={[
+                                { value: 'global', label: 'Global Namespace' },
+                                ...vaults.map((vault) => ({
+                                    value: vault.id,
+                                    label: vault.name,
+                                })),
+                            ]}
+                            buttonClassName="shrink-0 shadow-sm"
+                            minMenuWidthClassName="min-w-[220px]"
+                        />
+                        <div className="w-px h-4 bg-stone-200" />
+                        <button
+                            onClick={() => setIsContextSidebarOpen((open) => !open)}
+                            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors shrink-0 ${isContextSidebarOpen
+                                ? 'bg-orange-100 text-orange-800 border border-orange-200/70'
+                                : 'text-stone-500 hover:text-stone-900 hover:bg-orange-50 border border-transparent'
+                                }`}
+                        >
+                            <Database size={14} /> Vault Context
+                        </button>
                         <button
                             onClick={() => router.push(activeVaultId !== 'global' ? `/graph?vault=${encodeURIComponent(activeVaultId)}` : '/graph')}
-                            className="text-xs font-medium text-zinc-500 hover:text-zinc-900 flex items-center gap-1.5 transition-colors shrink-0"
+                            className="text-xs font-medium text-stone-500 hover:text-stone-900 flex items-center gap-1.5 transition-colors shrink-0"
                         >
                             <Network size={14} /> Knowledge Graph
                         </button>
-                        <div className="w-px h-4 bg-zinc-200" />
+                        <div className="w-px h-4 bg-stone-200" />
                         <button
                             onClick={() => setIsInspectorOpen(!isInspectorOpen)}
-                            className={`p-1.5 rounded-md transition-colors ${isInspectorOpen ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-100'}`}
+                            className={`p-1.5 rounded-xl transition-colors ${isInspectorOpen ? 'bg-orange-100 text-orange-800 border border-orange-200/70' : 'text-stone-500 hover:bg-orange-50'}`}
                         >
                             {isInspectorOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
                         </button>
                     </div>
                 </header>
 
+                <AnimatePresence>
+                    {isContextSidebarOpen && (
+                        <div className="absolute right-6 top-[4.25rem] z-20">
+                            <VaultContextPanel
+                                vaultFiles={vaultFiles}
+                                vectorCount={graphStats?.nodeCount?.toString()}
+                                onClose={() => setIsContextSidebarOpen(false)}
+                                onNewInvestigation={() => router.push('/investigations')}
+                                onUploadClick={() => fileInputRef.current?.click()}
+                                onImportUrlClick={() => {
+                                    setImportError("");
+                                    setIsImportModalOpen(true);
+                                }}
+                                onOpenFile={(file) => {
+                                    if (file.documentId) {
+                                        router.push(`/documents/${encodeURIComponent(file.documentId)}`);
+                                    }
+                                }}
+                                onSummarizeFile={handleSummarizeFile}
+                                onInvestigateFile={handleInvestigateFile}
+                            />
+                        </div>
+                    )}
+                </AnimatePresence>
+
                 <div className="flex-1 overflow-y-auto px-4 md:px-8 lg:px-16 py-8 relative z-0 custom-scrollbar scroll-smooth">
                     <div className="max-w-3xl mx-auto w-full">
                         {messages.length === 0 ? (
                              <div className="h-full flex flex-col items-center justify-center text-center opacity-40 mt-[10vh]">
-                                <Terminal size={48} className="mb-4 text-zinc-400" />
+                                <Terminal size={48} className="mb-4 text-stone-400" />
                                 <h3 className="text-xl font-bold text-zinc-900">Start a New Investigation</h3>
-                                <p className="text-sm text-zinc-500 max-w-[300px] mt-2 font-medium">Ask the agent about your files, or drop new documents into the vault context.</p>
+                                <p className="text-sm text-stone-600 max-w-[300px] mt-2 font-medium">Ask the agent about your files, or drop new documents into the vault context.</p>
                                 {activeVaultId !== 'global' && activeVaultGuidance?.overview && (
-                                    <div className="mt-6 max-w-xl rounded-2xl border border-zinc-200 bg-white/80 p-4 text-left opacity-100 shadow-sm">
-                                        <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Project Snapshot</p>
+                                    <div className="app-panel mt-6 max-w-xl rounded-[1.6rem] p-4 text-left opacity-100 shadow-sm">
+                                        <p className="app-kicker text-[10px] font-mono uppercase mb-2">Project Snapshot</p>
                                         <p className="text-sm text-zinc-700 leading-relaxed">{activeVaultGuidance.overview}</p>
                                         {activeVaultGuidance.keyThemes && activeVaultGuidance.keyThemes.length > 0 && (
-                                            <p className="mt-3 text-xs text-zinc-500">
+                                            <p className="mt-3 text-xs text-stone-600">
                                                 Themes: {activeVaultGuidance.keyThemes.slice(0, 4).join(', ')}
                                             </p>
                                         )}
                                         {activeVaultGuidance.riskSignals && activeVaultGuidance.riskSignals.length > 0 && (
-                                            <p className="mt-2 text-xs text-zinc-500">
+                                            <p className="mt-2 text-xs text-stone-500">
                                                 {activeVaultGuidance.riskSignals[0]}
                                             </p>
                                         )}
@@ -664,7 +710,7 @@ export default function ChatPage() {
                                                     <button
                                                         key={question}
                                                         onClick={() => runSuggestedPrompt(question)}
-                                                        className="px-3 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 hover:border-orange-300 hover:text-orange-700 transition-colors opacity-100"
+                                                        className="app-chip px-3 py-1.5 rounded-full text-xs hover:border-orange-300 hover:text-orange-700 transition-colors opacity-100"
                                                     >
                                                         {question}
                                                     </button>
@@ -689,28 +735,50 @@ export default function ChatPage() {
                                         className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-8`}
                                     >
                                         <div className={`flex gap-4 max-w-[95%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border shadow-sm ${isUser ? 'bg-white border-zinc-200 text-zinc-600' : 'bg-zinc-900 border-zinc-800 text-white'}`}>
+                                            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border shadow-sm ${isUser ? 'bg-[rgba(255,252,247,0.95)] border-stone-200 text-stone-600' : 'bg-[#231917] border-amber-200/10 text-orange-50'}`}>
                                                 {isUser ? <Search size={14} /> : <Terminal size={14} />}
                                             </div>
 
                                             <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} min-w-0`}>
                                                 <div className="flex items-center gap-2 mb-1.5 px-1">
                                                     <span className="text-xs font-medium text-zinc-800">{isUser ? 'User' : 'EvidenceOS'}</span>
-                                                    <span className="text-[10px] text-zinc-400 font-mono">{isUser ? 'Local Client' : 'ReAct Model'}</span>
+                                                    <span className="text-[10px] text-stone-400 font-mono">{isUser ? 'Local Client' : 'ReAct Model'}</span>
                                                 </div>
 
-                                                <div className={`relative px-5 py-4 text-sm leading-relaxed ${isUser ? 'bg-white border border-zinc-200/80 shadow-sm rounded-2xl rounded-tr-sm text-zinc-800' : 'bg-transparent text-zinc-800 w-full'}`}>
-                                                    {!isUser && msg.reasoning && <AgentReasoningBlock reasoning={msg.reasoning} />}
-                                                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                                                <div className={`relative px-5 py-4 text-sm leading-relaxed ${isUser
+                                                    ? 'app-panel rounded-2xl rounded-tr-sm text-zinc-800'
+                                                    : 'w-full rounded-[1.9rem] border border-stone-200/70 bg-[linear-gradient(180deg,rgba(255,253,249,0.96),rgba(255,246,236,0.86))] shadow-[0_18px_40px_-28px_rgba(77,52,22,0.22)]'
+                                                    }`}>
+                                                    {!isUser && (
+                                                        <div className="mb-4 flex flex-col gap-3 border-b border-orange-100/80 pb-4">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.18em] text-[#9d5423]">
+                                                                    Grounded Response
+                                                                </span>
+                                                                <span className="text-[11px] text-stone-500">
+                                                                    Structured synthesis from your vault memory
+                                                                </span>
+                                                            </div>
+                                                            {msg.reasoning && msg.reasoning.length > 0 && (
+                                                                <AgentReasoningBlock
+                                                                    reasoning={msg.reasoning}
+                                                                    citationCount={msg.citations?.length ?? 0}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div className={isUser ? "whitespace-pre-wrap" : ""}>
+                                                        {isUser ? msg.content : <StyledResponseText content={msg.content || ""} />}
+                                                    </div>
                                                     {!isUser && msg.citations && msg.citations.length > 0 && (
-                                                        <div className="mt-4 pt-4 border-t border-zinc-200/60 flex flex-wrap gap-2">
+                                                        <div className="mt-5 pt-4 border-t border-orange-100/90 flex flex-wrap gap-2">
                                                             {msg.citations.map((cite) => (
                                                                 <button
                                                                     key={cite.id}
                                                                     onClick={() => openInspector(cite)}
                                                                     className={`flex items-center gap-1.5 px-2.5 py-1.5 border rounded-md text-[11px] font-mono shadow-sm transition-all ${activeCitation?.id === cite.id && isInspectorOpen
-                                                                        ? 'bg-zinc-900 border-zinc-900 text-white'
-                                                                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-400 hover:text-orange-600'
+                                                                        ? 'bg-[#231917] border-amber-200/10 text-orange-50'
+                                                                        : 'app-chip hover:border-orange-400 hover:text-orange-600'
                                                                         }`}
                                                                 >
                                                                     <span className="text-zinc-400">[{cite.id}]</span>
@@ -732,9 +800,9 @@ export default function ChatPage() {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 md:p-6 bg-gradient-to-t from-zinc-50 via-zinc-50 to-transparent sticky bottom-0 z-10 pt-12">
+                <div className="p-4 md:p-6 bg-gradient-to-t from-[rgba(243,239,231,0.96)] via-[rgba(248,243,235,0.78)] to-transparent sticky bottom-0 z-10 pt-12">
                     <div className="max-w-3xl mx-auto w-full relative">
-                        <div className="bg-white rounded-2xl border border-zinc-200 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05),inset_0_2px_0_rgba(255,255,255,1)] p-2 flex flex-col gap-2 focus-within:shadow-[0_8px_30px_-10px_rgba(0,0,0,0.1),inset_0_2px_0_rgba(255,255,255,1)] focus-within:border-zinc-300 transition-all">
+                        <div className="app-panel rounded-[1.6rem] p-2 flex flex-col gap-2 focus-within:shadow-[0_18px_40px_-24px_rgba(77,52,22,0.3),inset_0_2px_0_rgba(255,255,255,1)] focus-within:border-orange-300 transition-all">
                             <textarea
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
@@ -745,7 +813,7 @@ export default function ChatPage() {
                                     }
                                 }}
                                 placeholder="Ask the agent to investigate your vault..."
-                                className="w-full max-h-[200px] min-h-[44px] bg-transparent resize-none outline-none px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400"
+                                className="w-full max-h-[200px] min-h-[44px] bg-transparent resize-none outline-none px-3 py-2 text-sm text-zinc-800 placeholder:text-stone-400"
                                 rows={1}
                             />
 
@@ -753,7 +821,7 @@ export default function ChatPage() {
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="p-2 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                                        className="p-2 text-stone-400 hover:text-stone-800 hover:bg-orange-50 rounded-xl transition-colors"
                                     >
                                         <Paperclip size={18} />
                                     </button>
@@ -762,17 +830,17 @@ export default function ChatPage() {
                                             setImportError("");
                                             setIsImportModalOpen(true);
                                         }}
-                                        className="p-2 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                                        className="p-2 text-stone-400 hover:text-stone-800 hover:bg-orange-50 rounded-xl transition-colors"
                                         title="Import YouTube URL"
                                     >
                                         <Link2 size={18} />
                                     </button>
-                                    <div className="h-4 w-px bg-zinc-200 mx-1" />
+                                    <div className="h-4 w-px bg-stone-200 mx-1" />
                                     <button
                                         onClick={() => runSuggestedPrompt(inputValue.trim()
                                             ? `Investigate this deeply using cross-document reasoning, contradictions, and project-wide context: ${inputValue}`
                                             : activeVaultGuidance?.followUpQuestions?.[0] || "Summarize this whole project and surface contradictions, support signals, and next steps.")}
-                                        className="px-2 py-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-md transition-colors flex items-center gap-1.5"
+                                        className="px-2 py-1 text-xs font-medium text-stone-500 hover:text-stone-800 hover:bg-orange-50 rounded-md transition-colors flex items-center gap-1.5"
                                     >
                                         <Search size={14} /> Deep Search
                                     </button>
@@ -781,7 +849,7 @@ export default function ChatPage() {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={handleSend}
                                     disabled={!inputValue.trim()}
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${inputValue.trim() ? 'bg-zinc-900 text-white shadow-md cursor-pointer hover:bg-zinc-800' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${inputValue.trim() ? 'app-button-primary shadow-md cursor-pointer' : 'bg-stone-100 text-stone-400 cursor-not-allowed border border-stone-200/70'
                                         }`}
                                 >
                                     <Send size={14} className={inputValue.trim() ? 'ml-0.5' : ''} />
@@ -800,14 +868,14 @@ export default function ChatPage() {
                         animate={{ width: 340, opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                        className="shrink-0 bg-white border-l border-zinc-200/60 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col z-20"
+                        className="shrink-0 bg-[rgba(255,252,247,0.9)] border-l border-stone-200/70 shadow-[-10px_0_30px_-15px_rgba(77,52,22,0.08)] overflow-hidden flex flex-col z-20"
                     >
-                        <div className="h-14 border-b border-zinc-200/60 flex items-center justify-between px-4 bg-zinc-50/80 backdrop-blur-sm shrink-0 w-[340px]">
+                        <div className="h-14 border-b border-stone-200/70 flex items-center justify-between px-4 bg-[rgba(255,248,239,0.84)] backdrop-blur-sm shrink-0 w-[340px]">
                             <div className="flex items-center gap-2">
                                 <Search size={14} className="text-orange-500" />
                                 <span className="font-semibold text-sm text-zinc-800">Source Inspector</span>
                             </div>
-                            <button onClick={() => setIsInspectorOpen(false)} className="text-zinc-400 hover:text-zinc-800 transition-colors p-1">
+                            <button onClick={() => setIsInspectorOpen(false)} className="text-stone-400 hover:text-stone-800 transition-colors p-1">
                                 <PanelRightClose size={16} />
                             </button>
                         </div>
@@ -816,23 +884,23 @@ export default function ChatPage() {
                             {activeCitation ? (
                                 <div className="flex flex-col gap-6">
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
-                                            <FileIcon type={activeCitation.mimeType?.startsWith('audio/') ? 'audio' : activeCitation.mimeType?.startsWith('image/') ? 'image' : 'pdf'} size={20} className="text-zinc-600" />
+                                        <div className="w-10 h-10 rounded-xl bg-orange-50/80 border border-orange-100/70 flex items-center justify-center shrink-0">
+                                            <FileIcon type={activeCitation.mimeType?.startsWith('audio/') ? 'audio' : activeCitation.mimeType?.startsWith('image/') ? 'image' : 'pdf'} size={20} className="text-orange-700" />
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-semibold text-zinc-900 truncate max-w-[240px]">{activeCitation.text}</h3>
-                                            <p className="text-xs text-zinc-500 font-mono mt-0.5">{activeCitation.ref}</p>
+                                            <p className="text-xs text-stone-500 font-mono mt-0.5">{activeCitation.ref}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
                                         {activeCitation.contentType && (
-                                            <span className="px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-[10px] font-mono text-zinc-600 uppercase">
+                                            <span className="app-chip px-2 py-1 rounded-md text-[10px] font-mono uppercase">
                                                 {activeCitation.contentType}
                                             </span>
                                         )}
                                         {activeCitation.mimeType && (
-                                            <span className="px-2 py-1 rounded-md bg-zinc-100 border border-zinc-200 text-[10px] font-mono text-zinc-500">
+                                            <span className="app-chip px-2 py-1 rounded-md text-[10px] font-mono">
                                                 {activeCitation.mimeType}
                                             </span>
                                         )}
@@ -840,10 +908,10 @@ export default function ChatPage() {
 
                                     <div>
                                         <div className="flex items-center gap-2 mb-3">
-                                            <Quote size={14} className="text-zinc-400" />
+                                            <Quote size={14} className="text-stone-400" />
                                             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-800">Evidence Extract</span>
                                         </div>
-                                        <p className="relative text-sm text-zinc-700 leading-relaxed font-serif p-3 bg-white border border-zinc-200 shadow-sm rounded-md">
+                                        <p className="relative text-sm text-zinc-700 leading-relaxed font-serif p-3 bg-[rgba(255,252,247,0.92)] border border-stone-200/70 shadow-sm rounded-xl">
                                             {activeCitation.chunk}
                                         </p>
                                     </div>

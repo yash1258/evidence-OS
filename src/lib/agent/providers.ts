@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getOpenRouterApiKey, hasUsableOpenRouterKey } from "./config";
 
 // ---- Provider Interface ----
 
@@ -162,7 +163,7 @@ export class OpenRouterProvider implements LLMProvider {
   private baseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
   constructor(model: string = "openrouter/hunter-alpha") {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = getOpenRouterApiKey();
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
     this.apiKey = apiKey;
     this.model = model;
@@ -245,13 +246,15 @@ export class OpenRouterProvider implements LLMProvider {
         const decoder = new TextDecoder();
         let fullText = "";
         const streamedToolCalls = new Map<number, { name: string; argsText: string }>();
+        let buffer = "";
 
         if (reader) {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n");
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
                 for (const line of lines) {
                     if (line.startsWith("data: ")) {
                         const payload = line.slice(6).trim();
@@ -280,6 +283,20 @@ export class OpenRouterProvider implements LLMProvider {
                     }
                 }
             }
+
+            if (buffer.startsWith("data: ")) {
+              const payload = buffer.slice(6).trim();
+              if (payload && payload !== "[DONE]") {
+                try {
+                  const parsed = JSON.parse(payload);
+                  const delta = parsed.choices?.[0]?.delta;
+                  if (delta?.content) {
+                    fullText += delta.content;
+                    onToken(delta.content);
+                  }
+                } catch { /* ignore */ }
+              }
+            }
         }
         const functionCalls = Array.from(streamedToolCalls.values())
           .filter((toolCall) => toolCall.name)
@@ -298,7 +315,7 @@ export class OpenRouterProvider implements LLMProvider {
     const functionCalls = choice.message?.tool_calls?.map(
       (tc: { function: { name: string; arguments: string } }) => ({
         name: tc.function.name,
-        args: JSON.parse(tc.function.arguments || "{}"),
+        args: safeParseArgs(tc.function.arguments || "{}"),
       })
     );
 
@@ -323,7 +340,7 @@ export function getProvider(): LLMProvider {
 }
 
 export function getFallbackProvider(): LLMProvider | null {
-  if (!fallbackProvider && process.env.OPENROUTER_API_KEY) {
+  if (!fallbackProvider && hasUsableOpenRouterKey()) {
     fallbackProvider = new OpenRouterProvider();
   }
   return fallbackProvider;

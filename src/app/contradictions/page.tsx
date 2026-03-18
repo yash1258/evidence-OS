@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, CheckCircle2, Scale, SplitSquareVertical } from "lucide-react";
 import { NavSidebar } from "@/components/Shared/NavSidebar";
+import { ThemedSelect } from "@/components/Shared/ThemedSelect";
 
 interface EdgeRecord {
     id: string;
@@ -85,17 +86,6 @@ export default function ContradictionsPage() {
 
     return (
         <div className="flex h-[100dvh] bg-zinc-50 font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.3); border-radius: 10px; }
-      `,
-            }} />
-
             <NavSidebar
                 isOpen={isNavSidebarOpen}
                 onToggle={() => setIsNavSidebarOpen((open) => !open)}
@@ -124,16 +114,21 @@ export default function ContradictionsPage() {
                         >
                             <span className="inline-flex items-center gap-2"><CheckCircle2 size={14} /> Support Signals</span>
                         </button>
-                        <select
+                        <ThemedSelect
                             value={activeVaultId}
-                            onChange={(event) => setActiveVaultId(event.target.value)}
-                            className="ml-auto rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-700 outline-none"
-                        >
-                            <option value="all">All Vaults</option>
-                            {vaults.map((vault) => (
-                                <option key={vault.id} value={vault.id}>{vault.name}</option>
-                            ))}
-                        </select>
+                            onChange={setActiveVaultId}
+                            options={[
+                                { value: "all", label: "All Vaults" },
+                                ...vaults.map((vault) => ({
+                                    value: vault.id,
+                                    label: vault.name,
+                                })),
+                            ]}
+                            className="ml-auto"
+                            align="right"
+                            buttonClassName="px-4 py-2 text-sm"
+                            minMenuWidthClassName="min-w-[220px]"
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">

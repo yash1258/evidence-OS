@@ -41,11 +41,6 @@ const SPRING_CONFIG = { type: "spring", stiffness: 100, damping: 20 } as const;
 export default function App() {
     return (
         <div className="min-h-[100dvh] bg-zinc-50 text-zinc-900 font-sans selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-      `}} />
             <div className="fixed inset-0 z-50 pointer-events-none opacity-[0.02] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
             <Navbar />

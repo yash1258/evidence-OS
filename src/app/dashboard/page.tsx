@@ -27,6 +27,7 @@ import {
 import { MagneticButton } from '@/components/Shared/MagneticButton';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
 import { ToastStack, useToastStack } from '@/components/Shared/ToastStack';
+import { ThemedSelect } from '@/components/Shared/ThemedSelect';
 import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
 import { getNoticeFromError } from '@/lib/ui/errorNotice';
 
@@ -272,21 +273,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="flex h-[100dvh] bg-zinc-50 font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.3); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(161, 161, 170, 0.6); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}} />
-
+        <div className="app-shell flex h-[100dvh] font-sans text-zinc-900 overflow-hidden selection:bg-orange-100 selection:text-orange-900">
             <NavSidebar
                 nodeCount={graphStats?.nodeCount}
                 isOpen={isNavSidebarOpen}
@@ -294,20 +281,20 @@ export default function Dashboard() {
             />
 
             {/* MAIN CONTENT AREA */}
-            <main className="flex-1 flex flex-col relative min-w-0 overflow-y-auto custom-scrollbar bg-zinc-50/50">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-10" />
-                <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.03),transparent_50%)] pointer-events-none -z-10 blur-3xl" />
+            <main className="flex-1 flex flex-col relative min-w-0 overflow-y-auto custom-scrollbar">
+                <div className="app-page-grid absolute inset-0 bg-[size:32px_32px] pointer-events-none -z-10 opacity-60" />
+                <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-[radial-gradient(circle_at_top_right,rgba(199,106,46,0.08),transparent_50%)] pointer-events-none -z-10 blur-3xl" />
 
-                <header className="h-14 bg-white/70 backdrop-blur-xl border-b border-zinc-200/60 flex items-center justify-end px-6 lg:px-8 sticky top-0 z-30 shrink-0">
+                <header className="app-toolbar h-14 flex items-center justify-end px-6 lg:px-8 sticky top-0 z-30 shrink-0">
                     <div className="flex items-center gap-4 shrink-0">
                         <button
                             onClick={() => searchInputRef.current?.focus()}
-                            className="flex items-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+                            className="flex items-center gap-2 text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors"
                         >
                             <Search size={14} /> <span className="hidden sm:inline">Search OS</span>
                         </button>
-                        <div className="w-px h-4 bg-zinc-200" />
-                        <div className="w-7 h-7 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-sm font-mono text-[10px] cursor-pointer border border-zinc-700 shrink-0 hover:bg-zinc-800 transition-colors">
+                        <div className="w-px h-4 bg-stone-200" />
+                        <div className="w-7 h-7 rounded-full bg-[#231917] text-orange-50 flex items-center justify-center shadow-sm font-mono text-[10px] cursor-pointer border border-amber-200/10 shrink-0 hover:bg-[#31211d] transition-colors">
                             ME
                         </div>
                     </div>
@@ -325,12 +312,12 @@ export default function Dashboard() {
                             What do you want to investigate?
                         </h1>
 
-                        <div className={`w-full max-w-2xl bg-white rounded-2xl border transition-all duration-300 shadow-sm flex flex-col overflow-hidden relative ${isFocused
-                            ? 'border-orange-500/50 shadow-[0_8px_30px_-10px_rgba(249,115,22,0.15)] ring-4 ring-orange-500/10'
-                            : 'border-zinc-200'
+                        <div className={`app-panel w-full max-w-2xl rounded-[1.7rem] transition-all duration-300 flex flex-col overflow-hidden relative ${isFocused
+                            ? 'border-orange-500/45 shadow-[0_18px_42px_-18px_rgba(199,106,46,0.22)] ring-4 ring-orange-500/10'
+                            : ''
                             }`}>
-                            <div className="flex items-center px-4 py-3.5 border-b border-zinc-100 bg-white relative z-10">
-                                <Sparkles size={18} className={`shrink-0 mr-3 transition-colors ${isFocused ? 'text-orange-500' : 'text-zinc-400'}`} />
+                            <div className="flex items-center px-4 py-3.5 border-b border-stone-200/70 bg-white/80 relative z-10">
+                                <Sparkles size={18} className={`shrink-0 mr-3 transition-colors ${isFocused ? 'text-orange-500' : 'text-stone-400'}`} />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
@@ -346,29 +333,29 @@ export default function Dashboard() {
                                     <MagneticButton
                                         disabled={!searchQuery}
                                         onClick={handleOmnibarSubmit}
-                                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${searchQuery ? 'bg-zinc-900 text-white shadow-md hover:bg-zinc-800' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'}`}
+                                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${searchQuery ? 'app-button-primary shadow-md' : 'bg-stone-100 text-stone-400 cursor-not-allowed border border-stone-200/70'}`}
                                     >
                                         <ArrowRight size={14} className={searchQuery ? 'ml-0.5' : ''} />
                                     </MagneticButton>
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-50/80 px-4 py-2.5 flex items-center gap-3 overflow-x-auto no-scrollbar relative z-0">
-                                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 shrink-0 font-semibold flex items-center gap-1">
+                            <div className="bg-[linear-gradient(180deg,rgba(255,246,233,0.7),rgba(255,251,245,0.88))] px-4 py-2.5 flex items-center gap-3 overflow-x-auto no-scrollbar relative z-0">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 shrink-0 font-semibold flex items-center gap-1">
                                     <Database size={10} /> Context:
                                 </span>
                                 <button
                                     onClick={() => setActiveScope('all')}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all shrink-0 ${activeScope === 'all' ? 'bg-white border-zinc-200 border text-zinc-900 shadow-sm' : 'bg-transparent border border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 ${activeScope === 'all' ? 'app-chip-active' : 'text-stone-500 hover:text-stone-700'}`}
                                 >
                                     All Vaults
                                 </button>
-                                {knowledgeSpaces.length > 0 && <div className="w-px h-3 bg-zinc-200 shrink-0" />}
+                                {knowledgeSpaces.length > 0 && <div className="w-px h-3 bg-stone-200 shrink-0" />}
                                 {knowledgeSpaces.map((space) => (
                                     <button
                                         key={space.id}
                                         onClick={() => setActiveScope(space.id)}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all shrink-0 ${activeScope === space.id ? 'bg-white border-zinc-200 border text-zinc-900 shadow-sm' : 'bg-transparent border border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 ${activeScope === space.id ? 'app-chip-active' : 'text-stone-500 hover:text-stone-700'}`}
                                     >
                                         <Folder size={12} className={activeScope === space.id ? 'text-blue-500' : ''} /> {space.name}
                                     </button>
@@ -381,7 +368,7 @@ export default function Dashboard() {
                                 <button
                                     key={i}
                                     onClick={() => handleSuggestedPrompt(prompt)}
-                                    className="px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/80 text-xs text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-sm transition-all cursor-pointer"
+                                    className="app-chip px-3.5 py-1.5 rounded-full text-xs hover:border-orange-300 hover:text-orange-700 hover:shadow-sm transition-all cursor-pointer"
                                 >
                                     {prompt}
                                 </button>
@@ -394,22 +381,23 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between">
                             <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">Evidence Vault</h2>
                             <div className="flex items-center gap-3">
-                                <div className="flex items-center bg-white border border-zinc-200 rounded-md p-1 shadow-sm">
-                                    <span className="text-[10px] uppercase font-mono text-zinc-500 px-2 font-semibold">Target:</span>
-                                    <select
-                                        value={targetVaultId}
-                                        onChange={(e) => setTargetVaultId(e.target.value)}
-                                        className="text-xs font-medium text-zinc-700 bg-transparent border-none outline-none py-0.5 cursor-pointer max-w-[120px]"
-                                    >
-                                        <option value="global">Global Namespace</option>
-                                        {knowledgeSpaces.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <ThemedSelect
+                                    label="Target"
+                                    value={targetVaultId}
+                                    onChange={setTargetVaultId}
+                                    options={[
+                                        { value: 'global', label: 'Global Namespace' },
+                                        ...knowledgeSpaces.map((space) => ({
+                                            value: space.id,
+                                            label: space.name,
+                                        })),
+                                    ]}
+                                    buttonClassName="shadow-sm"
+                                    minMenuWidthClassName="min-w-[220px]"
+                                />
                                 <button
                                     onClick={() => setIsCreateVaultModalOpen(true)}
-                                    className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1 bg-white border border-zinc-200 px-2.5 py-1.5 rounded-md shadow-sm"
+                                    className="app-button-secondary text-[11px] font-semibold transition-colors flex items-center gap-1 px-2.5 py-1.5 rounded-xl shadow-sm"
                                 >
                                     <Folder size={12} /> New Vault
                                 </button>
@@ -418,13 +406,13 @@ export default function Dashboard() {
                                         setImportError('');
                                         setIsImportModalOpen(true);
                                     }}
-                                    className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1 bg-white border border-zinc-200 px-2.5 py-1.5 rounded-md shadow-sm"
+                                    className="app-button-secondary text-[11px] font-semibold transition-colors flex items-center gap-1 px-2.5 py-1.5 rounded-xl shadow-sm"
                                 >
                                     <Link2 size={12} /> Import URL
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="text-[11px] font-semibold text-white hover:bg-zinc-800 transition-colors flex items-center gap-1 bg-zinc-900 shadow-md px-2.5 py-1.5 rounded-md"
+                                    className="app-button-primary text-[11px] font-semibold transition-colors flex items-center gap-1 shadow-md px-2.5 py-1.5 rounded-xl"
                                 >
                                     <Plus size={12} /> Upload File
                                 </button>
@@ -444,7 +432,7 @@ export default function Dashboard() {
                                     ? 'border-emerald-300 bg-emerald-50/30'
                                     : uploadStatus === 'error'
                                     ? 'border-red-300 bg-red-50/30'
-                                    : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'
+                                    : 'border-stone-200/80 bg-[rgba(255,252,247,0.88)] hover:border-orange-200/70 hover:bg-[rgba(255,249,241,0.95)]'
                             }`}
                         >
                             {uploadStatus === 'uploading' ? (
@@ -479,16 +467,16 @@ export default function Dashboard() {
                         {knowledgeSpaces.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {knowledgeSpaces.map((space) => (
-                                    <div key={space.id} className="bg-white rounded-2xl border border-zinc-200/80 shadow-sm p-4 flex flex-col hover:border-orange-300 hover:shadow-[0_4px_20px_-10px_rgba(249,115,22,0.1)] transition-all cursor-pointer group relative overflow-hidden">
+                                    <div key={space.id} className="app-panel rounded-[1.6rem] p-4 flex flex-col hover:border-orange-300 hover:shadow-[0_18px_38px_-24px_rgba(199,106,46,0.25)] transition-all cursor-pointer group relative overflow-hidden">
                                         <div className="flex items-start justify-between mb-4 relative z-10">
-                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-sm bg-zinc-50 border-zinc-200 text-zinc-600 group-hover:bg-white transition-colors">
+                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-sm bg-orange-50/80 border-orange-100/70 text-orange-700 group-hover:bg-white transition-colors">
                                                 <Database size={16} />
                                             </div>
                                         </div>
                                         <div className="relative z-10 flex-1">
                                             <h3 className="text-[13px] font-bold text-zinc-900 truncate mb-1" title={space.name}>{space.name}</h3>
-                                            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
-                                                <span className="bg-zinc-100 px-1.5 py-0.5 rounded text-[10px]">{space.files} files</span>
+                                            <div className="flex items-center gap-2 text-[11px] text-stone-500 font-mono">
+                                                <span className="bg-orange-50 px-1.5 py-0.5 rounded text-[10px] text-orange-700 border border-orange-100">{space.files} files</span>
                                                 <span>{space.size}</span>
                                             </div>
                                             {space.overviewStats?.topTags && space.overviewStats.topTags.length > 0 && (
@@ -501,17 +489,17 @@ export default function Dashboard() {
                                                 </div>
                                             )}
                                             {space.overviewStats?.keyThemes && space.overviewStats.keyThemes.length > 0 && (
-                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                                                <p className="mt-2 text-[11px] leading-relaxed text-stone-600">
                                                     Themes: {space.overviewStats.keyThemes.slice(0, 3).join(', ')}
                                                 </p>
                                             )}
                                             {space.overview && (
-                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 line-clamp-3">
+                                                <p className="mt-2 text-[11px] leading-relaxed text-stone-600 line-clamp-3">
                                                     {space.overview}
                                                 </p>
                                             )}
                                             {space.overviewStats?.riskSignals && space.overviewStats.riskSignals.length > 0 && (
-                                                <p className="mt-2 text-[11px] leading-relaxed text-zinc-400 line-clamp-2">
+                                                <p className="mt-2 text-[11px] leading-relaxed text-stone-500 line-clamp-2">
                                                     {space.overviewStats.riskSignals[0]}
                                                 </p>
                                             )}
@@ -524,7 +512,7 @@ export default function Dashboard() {
                                                                 event.stopPropagation();
                                                                 handleSuggestedPrompt(question, space.id);
                                                             }}
-                                                            className="px-2 py-1 rounded-md bg-white border border-zinc-200 text-[10px] font-medium text-zinc-600 hover:border-orange-300 hover:text-orange-700 transition-colors"
+                                                            className="app-chip px-2 py-1 rounded-md text-[10px] font-medium hover:border-orange-300 hover:text-orange-700 transition-colors"
                                                         >
                                                             {question}
                                                         </button>
@@ -540,7 +528,7 @@ export default function Dashboard() {
                                         <div className="mt-5 relative z-10 flex flex-col gap-2">
                                             <div className="flex items-center justify-between text-[10px] font-mono">
                                                 <span className="text-emerald-600 font-semibold flex items-center gap-1"><CheckCircle2 size={10} /> Indexed</span>
-                                                <span className="text-zinc-400 flex items-center gap-1"><Clock size={9} /> {space.lastSync}</span>
+                                                <span className="text-stone-500 flex items-center gap-1"><Clock size={9} /> {space.lastSync}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -561,37 +549,37 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => router.push(activeScope !== 'all' ? `/contradictions?vault=${encodeURIComponent(activeScope)}` : '/contradictions')}
-                                        className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
+                                        className="text-[11px] font-semibold text-stone-500 hover:text-stone-900 transition-colors flex items-center gap-1"
                                     >
                                         Compare Conflicts <ArrowUpRight size={12} />
                                     </button>
                                     <button
                                         onClick={() => router.push('/investigations')}
-                                        className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-1"
+                                        className="text-[11px] font-semibold text-stone-500 hover:text-stone-900 transition-colors flex items-center gap-1"
                                     >
                                         View History <ArrowUpRight size={12} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-sm flex flex-col overflow-hidden">
+                            <div className="app-panel rounded-[1.6rem] flex flex-col overflow-hidden">
                                 {recentInvestigations.length > 0 ? recentInvestigations.map((inv, idx) => (
-                                    <div key={inv.id} className={`p-4 hover:bg-zinc-50 transition-colors cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${idx !== recentInvestigations.length - 1 ? 'border-b border-zinc-100' : ''}`}>
+                                    <div key={inv.id} className={`p-4 hover:bg-orange-50/40 transition-colors cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${idx !== recentInvestigations.length - 1 ? 'border-b border-stone-200/60' : ''}`}>
                                         <div className="flex flex-col min-w-0 flex-1">
                                             <div className="flex items-center gap-2.5 mb-1.5">
-                                                <div className="p-1 rounded bg-zinc-100 group-hover:bg-orange-100 transition-colors shrink-0">
-                                                    <MessageSquare size={12} className="text-zinc-500 group-hover:text-orange-600 transition-colors" />
+                                                <div className="p-1 rounded bg-orange-50 border border-orange-100/70 group-hover:bg-orange-100 transition-colors shrink-0">
+                                                    <MessageSquare size={12} className="text-orange-600 transition-colors" />
                                                 </div>
                                                 <h4 className="text-sm font-semibold text-zinc-900 truncate">{inv.title}</h4>
                                             </div>
-                                            <p className="text-xs text-zinc-500 truncate pl-7">{inv.excerpt}</p>
+                                            <p className="text-xs text-stone-600 truncate pl-7">{inv.excerpt}</p>
                                         </div>
                                         <div className="flex items-center sm:justify-end gap-5 shrink-0 pl-7 sm:pl-0 mt-2 sm:mt-0">
-                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-200/80 text-[10px] font-mono text-zinc-600">
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50/70 border border-orange-100 text-[10px] font-mono text-orange-700">
                                                 <FileText size={10} /> {inv.sources} sources
                                             </div>
-                                            <span className="text-[10px] font-mono text-zinc-400 w-12 text-right">{inv.time}</span>
-                                            <ChevronRight size={16} className="text-zinc-400" />
+                                            <span className="text-[10px] font-mono text-stone-500 w-12 text-right">{inv.time}</span>
+                                            <ChevronRight size={16} className="text-stone-400" />
                                         </div>
                                     </div>
                                 )) : (
@@ -607,39 +595,39 @@ export default function Dashboard() {
                                 <h2 className="text-[13px] font-bold tracking-wider text-zinc-900 uppercase">System Integrity</h2>
                             </div>
 
-                            <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)] p-5 flex flex-col gap-6 relative overflow-hidden h-full group">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#09090b_100%)] pointer-events-none" />
+                            <div className="app-dark-sidebar rounded-[1.6rem] border shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)] p-5 flex flex-col gap-6 relative overflow-hidden h-full group">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(20,17,15,0.94)_100%)] pointer-events-none" />
 
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div className="flex items-start gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                                            <CheckCircle2 size={20} className="text-emerald-500" />
+                                            <CheckCircle2 size={20} className="text-emerald-300" />
                                         </div>
                                         <div>
-                                            <h3 className="text-sm font-bold text-white tracking-tight">Zero-Trust Active</h3>
-                                            <p className="text-[10px] font-mono text-zinc-400 mt-0.5">Daemon running locally.</p>
+                                            <h3 className="text-sm font-bold text-stone-50 tracking-tight">Zero-Trust Active</h3>
+                                            <p className="text-[10px] font-mono text-stone-400 mt-0.5">Daemon running locally.</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="relative z-10 flex flex-col gap-1 flex-1 justify-center bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/80">
-                                    <div className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
-                                        <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-2"><Network size={12} /> Graph Nodes</span>
-                                        <span className="text-[11px] font-mono font-semibold text-zinc-200">{graphStats?.totalNodes ?? graphStats?.nodeCount ?? '—'}</span>
+                                <div className="relative z-10 flex flex-col gap-1 flex-1 justify-center app-dark-card rounded-2xl p-3">
+                                    <div className="flex items-center justify-between py-1.5 border-b app-dark-line last:border-0">
+                                        <span className="text-[11px] font-mono text-stone-400 flex items-center gap-2"><Network size={12} /> Graph Nodes</span>
+                                        <span className="text-[11px] font-mono font-semibold text-stone-200">{graphStats?.totalNodes ?? graphStats?.nodeCount ?? '—'}</span>
                                     </div>
-                                    <div className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
-                                        <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-2"><Activity size={12} /> Graph Edges</span>
-                                        <span className="text-[11px] font-mono font-semibold text-zinc-200">{graphStats?.edgeCount ?? '—'}</span>
+                                    <div className="flex items-center justify-between py-1.5 border-b app-dark-line last:border-0">
+                                        <span className="text-[11px] font-mono text-stone-400 flex items-center gap-2"><Activity size={12} /> Graph Edges</span>
+                                        <span className="text-[11px] font-mono font-semibold text-stone-200">{graphStats?.edgeCount ?? '—'}</span>
                                     </div>
-                                    <div className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
-                                        <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-2"><Cpu size={12} /> Agent Core</span>
-                                        <span className="text-[11px] font-mono font-semibold text-emerald-400 text-right">Gemini ReAct</span>
+                                    <div className="flex items-center justify-between py-1.5 border-b app-dark-line last:border-0">
+                                        <span className="text-[11px] font-mono text-stone-400 flex items-center gap-2"><Cpu size={12} /> Agent Core</span>
+                                        <span className="text-[11px] font-mono font-semibold text-emerald-300 text-right">Gemini ReAct</span>
                                     </div>
                                 </div>
 
                                 <button
                                     onClick={() => router.push(activeScope !== 'all' ? `/graph?vault=${encodeURIComponent(activeScope)}` : '/graph')}
-                                    className="relative z-10 w-full py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 transition-colors text-xs font-medium text-zinc-300 flex items-center justify-center gap-2"
+                                    className="relative z-10 w-full py-2.5 rounded-xl bg-white/[0.04] border app-dark-line hover:bg-white/[0.08] transition-colors text-xs font-medium text-stone-200 flex items-center justify-center gap-2"
                                 >
                                     <Terminal size={14} /> View Telemetry Logs
                                 </button>
@@ -657,7 +645,7 @@ export default function Dashboard() {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 w-[400px] max-w-[90vw] flex flex-col gap-4"
+                            className="app-panel rounded-[1.6rem] shadow-xl p-6 w-[400px] max-w-[90vw] flex flex-col gap-4"
                         >
                             <h3 className="text-lg font-bold text-zinc-900">Create New Vault</h3>
                             <form onSubmit={handleCreateVault} className="flex flex-col gap-4 mt-2">
@@ -666,21 +654,21 @@ export default function Dashboard() {
                                     placeholder="Vault Name"
                                     value={newVaultName}
                                     onChange={(e) => setNewVaultName(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 outline-none text-sm transition-all"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[rgba(255,250,243,0.9)] outline-none text-sm transition-all focus:border-orange-300"
                                     autoFocus
                                 />
                                 <div className="flex items-center justify-end gap-3 mt-2">
                                     <button
                                         type="button"
                                         onClick={() => setIsCreateVaultModalOpen(false)}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-500 hover:bg-zinc-100"
+                                        className="px-4 py-2 rounded-xl text-xs font-semibold text-stone-500 hover:bg-orange-50"
                                     >
                                         Cancel
                                     </button>
                                     <MagneticButton
                                         type="submit"
                                         disabled={!newVaultName.trim()}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-zinc-900 disabled:opacity-50"
+                                        className="app-button-primary px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
                                     >
                                         Create Vault
                                     </MagneticButton>

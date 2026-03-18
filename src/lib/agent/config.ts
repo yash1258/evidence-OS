@@ -21,6 +21,28 @@ export interface AgentRuntimeConfig {
 const DEFAULT_OPENROUTER_WORKER_MODEL = "openrouter/healer-alpha";
 const DEFAULT_WORKER_TIMEOUT_MS = 12000;
 
+function normalizeOpenRouterApiKey(rawValue: string | undefined): string | null {
+  const trimmed = rawValue?.trim();
+  if (!trimmed) return null;
+  if (
+    trimmed === "your_openrouter_api_key_here" ||
+    trimmed === "OPENROUTER_API_KEY" ||
+    trimmed === "placeholder"
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+export function getOpenRouterApiKey(): string | null {
+  return normalizeOpenRouterApiKey(process.env.OPENROUTER_API_KEY);
+}
+
+export function hasUsableOpenRouterKey(): boolean {
+  const key = getOpenRouterApiKey();
+  return Boolean(key && key.startsWith("sk-or-"));
+}
+
 function getOpenRouterWorkerModel(roleKey: string): string {
   return (
     process.env[roleKey] ||
@@ -30,7 +52,7 @@ function getOpenRouterWorkerModel(roleKey: string): string {
 }
 
 export function getAgentRuntimeConfig(): AgentRuntimeConfig {
-  const openRouterEnabled = Boolean(process.env.OPENROUTER_API_KEY);
+  const openRouterEnabled = hasUsableOpenRouterKey();
 
   return {
     mode: openRouterEnabled ? "parallel" : "single",
