@@ -20,11 +20,13 @@ import {
     AlertCircle,
     Database,
     Network,
-    Terminal
+    Terminal,
+    Link2
 } from 'lucide-react';
 
 import { MagneticButton } from '@/components/Shared/MagneticButton';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
+import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
 
 // --- TYPES ---
 
@@ -90,6 +92,10 @@ export default function Dashboard() {
     const [targetVaultId, setTargetVaultId] = useState('global');
     const [isCreateVaultModalOpen, setIsCreateVaultModalOpen] = useState(false);
     const [newVaultName, setNewVaultName] = useState('');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importUrl, setImportUrl] = useState('');
+    const [isImportingUrl, setIsImportingUrl] = useState(false);
+    const [importError, setImportError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -179,6 +185,44 @@ export default function Dashboard() {
         setIsDragging(false);
         const file = e.dataTransfer?.files?.[0];
         if (file) handleFileUpload(file);
+    };
+
+    const handleYouTubeImport = async () => {
+        if (!importUrl.trim()) return;
+
+        setIsImportingUrl(true);
+        setImportError('');
+
+        try {
+            const res = await fetch('/api/import/youtube', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: importUrl.trim(),
+                    ...(targetVaultId !== 'global' ? { vaultId: targetVaultId } : {}),
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'YouTube import failed');
+            }
+
+            setUploadStatus('success');
+            setUploadFileName(data.filename || 'YouTube transcript');
+            setIsImportModalOpen(false);
+            setImportUrl('');
+            fetchDashboardData();
+            setTimeout(() => setUploadStatus(null), 2500);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'YouTube import failed';
+            setImportError(message);
+            setUploadStatus('error');
+            setUploadError(message);
+            setTimeout(() => setUploadStatus(null), 4000);
+        } finally {
+            setIsImportingUrl(false);
+        }
     };
 
     const handleOmnibarSubmit = () => {
@@ -355,6 +399,15 @@ export default function Dashboard() {
                                     className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1 bg-white border border-zinc-200 px-2.5 py-1.5 rounded-md shadow-sm"
                                 >
                                     <Folder size={12} /> New Vault
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setImportError('');
+                                        setIsImportModalOpen(true);
+                                    }}
+                                    className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1 bg-white border border-zinc-200 px-2.5 py-1.5 rounded-md shadow-sm"
+                                >
+                                    <Link2 size={12} /> Import URL
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
@@ -624,6 +677,19 @@ export default function Dashboard() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <YouTubeImportModal
+                isOpen={isImportModalOpen}
+                value={importUrl}
+                isImporting={isImportingUrl}
+                error={importError}
+                onChange={setImportUrl}
+                onClose={() => {
+                    setIsImportModalOpen(false);
+                    setImportError('');
+                }}
+                onSubmit={handleYouTubeImport}
+            />
         </div>
     );
 }

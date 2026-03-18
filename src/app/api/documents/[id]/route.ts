@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getChunksByDocument, getDocument } from "@/lib/storage/database";
+import { getChunksByDocument, getDocument, getNode } from "@/lib/storage/database";
 import fs from "fs";
 import path from "path";
 
@@ -18,6 +18,7 @@ export async function GET(
     }
 
     const chunks = getChunksByDocument(id);
+    const node = getNode(id);
     const filePath = path.join(UPLOADS_DIR, document.filename);
     let fullContent: string | null = null;
 
@@ -27,6 +28,7 @@ export async function GET(
 
     return NextResponse.json({
       document,
+      nodeProperties: node?.properties || {},
       fullContent,
       chunks,
     });

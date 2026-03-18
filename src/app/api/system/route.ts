@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getGraphStats, listVaults } from "@/lib/storage/database";
+import { getChromaHealth } from "@/lib/storage/vectorStore";
 
 export async function GET() {
   try {
     const chromaUrl = process.env.CHROMA_URL || "http://localhost:8000";
     const url = new URL(chromaUrl);
+    const chromaHealth = await getChromaHealth();
 
     return NextResponse.json({
       models: {
@@ -18,6 +20,8 @@ export async function GET() {
         chroma: {
           host: `${url.protocol}//${url.hostname}`,
           port: url.port || (url.protocol === "https:" ? "443" : "80"),
+          connected: chromaHealth.connected,
+          error: chromaHealth.error || null,
         },
         storage: {
           database: "data/evidence.db",

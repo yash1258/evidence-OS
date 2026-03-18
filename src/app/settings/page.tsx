@@ -24,6 +24,8 @@ interface SystemState {
         chroma: {
             host: string;
             port: string;
+            connected: boolean;
+            error: string | null;
         };
         storage: {
             database: string;
@@ -133,8 +135,20 @@ export default function SettingsPage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3">
-                                    <span className="text-sm text-zinc-700">Chroma Host</span>
-                                    <span className="text-xs font-mono text-zinc-500">{systemState?.services.chroma.host}:{systemState?.services.chroma.port}</span>
+                                    <span className="text-sm text-zinc-700">Chroma</span>
+                                    <div className="text-right">
+                                        <div className={`text-xs font-mono ${systemState?.services.chroma.connected ? "text-emerald-600" : "text-rose-500"}`}>
+                                            {systemState?.services.chroma.connected ? "Connected" : "Unavailable"}
+                                        </div>
+                                        <div className="text-[11px] font-mono text-zinc-500 mt-1">
+                                            {systemState?.services.chroma.host}:{systemState?.services.chroma.port}
+                                        </div>
+                                        {!systemState?.services.chroma.connected && systemState?.services.chroma.error && (
+                                            <div className="text-[11px] text-rose-500 mt-1 max-w-[280px] leading-relaxed">
+                                                {systemState.services.chroma.error}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

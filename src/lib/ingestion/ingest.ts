@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs";
 import { chunkContent } from "./chunking";
-import { embedContent } from "./embedding";
+import { embedContent, embedText } from "./embedding";
 import { addVectors } from "@/lib/storage/vectorStore";
 import {
   insertDocument,
@@ -30,6 +30,24 @@ export interface IngestResult {
     edgesCreated: number;
     insights: string[];
   };
+}
+
+interface PreparedDocumentInput {
+  documentId?: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  chunks: Array<{
+    content: string | Buffer;
+    mimeType: string;
+    preview: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  vaultId?: string;
+  onProgress?: (step: string) => void;
+  storedContent?: string | Buffer;
+  fileExtension?: string;
+  graphNodeProperties?: Record<string, unknown>;
 }
 
 /**
@@ -93,38 +111,42 @@ Return ONLY the JSON object, no markdown fencing.`
   }
 }
 
-/**
- * Main ingestion pipeline
- * 1. Save file to disk
- * 2. Chunk content
- * 3. Generate metadata with AI
- * 4. Embed each chunk (PARALLEL)
- * 5. Store vectors + metadata
- */
-export async function ingestFile(
-  fileBuffer: Buffer,
-  originalName: string,
-  mimeType: string,
-  vaultId?: string,
-  onProgress?: (step: string) => void
-): Promise<IngestResult> {
-  const documentId = uuidv4();
-  const ext = path.extname(originalName) || "";
-  const filename = `${documentId}${ext}`;
+function buildStoredFilename(documentId: string, originalName: string, fileExtension?: string): string {
+  const ext = fileExtension || path.extname(originalName) || "";
+  return `${documentId}${ext}`;
+}
+
+async function ingestPreparedDocument({
+  documentId = uuidv4(),
+  originalName,
+  mimeType,
+  fileSize,
+  chunks,
+  vaultId,
+  onProgress,
+  storedContent,
+  fileExtension,
+  graphNodeProperties,
+}: PreparedDocumentInput): Promise<IngestResult> {
+  const filename = buildStoredFilename(documentId, originalName, fileExtension);
   const filePath = path.join(UPLOADS_DIR, filename);
 
   try {
-    // 1. Save file
-    onProgress?.("Saving file...");
-    fs.writeFileSync(filePath, fileBuffer);
+    if (storedContent !== undefined) {
+      onProgress?.("Saving imported source...");
+      if (typeof storedContent === "string") {
+        fs.writeFileSync(filePath, storedContent, "utf-8");
+      } else {
+        fs.writeFileSync(filePath, storedContent);
+      }
+    }
 
-    // 2. Insert document record (processing state)
     insertDocument({
       id: documentId,
       filename,
       originalName,
       mimeType,
-      fileSize: fileBuffer.length,
+      fileSize,
       contentType: "general",
       summary: "",
       tags: [],
@@ -142,19 +164,10 @@ export async function ingestFile(
       });
     }
 
-    // 3. Chunk content
-    onProgress?.("Analyzing content structure...");
-    const contentForChunking =
-      mimeType.startsWith("text/") || mimeType === "text/plain" || mimeType === "text/markdown"
-        ? fileBuffer.toString("utf-8")
-        : fileBuffer;
-    const chunks = await chunkContent(contentForChunking, mimeType, originalName, filePath);
-
     if (chunks.length === 0) {
-        throw new Error("No content could be extracted from this file.");
+      throw new Error("No content could be extracted from this source.");
     }
 
-    // 4. Generate AI metadata from first chunk preview
     onProgress?.("Generating metadata with AI...");
     const previewText = chunks[0]?.preview || originalName;
     const metadataContext = chunks
@@ -163,25 +176,30 @@ export async function ingestFile(
       .join("\n\n");
     const metadata = await generateMetadata(previewText, metadataContext, originalName, mimeType);
 
-    // 5. Embed chunks in parallel batches
     onProgress?.(`Embedding ${chunks.length} chunk(s) in parallel...`);
-    
-    // Batch size for concurrency control
     const BATCH_SIZE = 5;
     const vectorDocs = [];
 
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE);
       onProgress?.(`Embedding chunk batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)}...`);
-      
+
       const batchResults = await Promise.all(batch.map(async (chunk, batchIdx) => {
         const index = i + batchIdx;
         const chunkId = `${documentId}_chunk_${index}`;
-        
-        // Embed the chunk
-        const embedding = await embedContent(chunk.content, chunk.mimeType);
-        
-        // Store chunk record in SQLite
+        let embedding;
+
+        try {
+          embedding = await embedContent(chunk.content, chunk.mimeType);
+        } catch (error) {
+          const fallbackText = typeof chunk.metadata?.fallbackText === "string" ? chunk.metadata.fallbackText : "";
+          if (chunk.mimeType === "application/pdf" && fallbackText.trim().length > 0) {
+            embedding = await embedText(fallbackText);
+          } else {
+            throw error;
+          }
+        }
+
         insertChunk({
           id: chunkId,
           documentId,
@@ -216,14 +234,12 @@ export async function ingestFile(
       vectorDocs.push(...batchResults);
     }
 
-    // 6. Batch add vectors to ChromaDB
     onProgress?.("Storing in vector database...");
     await addVectors(vectorDocs);
 
-    // 7. Build knowledge graph
     onProgress?.("Building knowledge graph...");
-    const chunkIds = chunks.map((_, i) => `${documentId}_chunk_${i}`);
-    const chunkPreviews = chunks.map((c) => c.preview);
+    const chunkIds = chunks.map((_, index) => `${documentId}_chunk_${index}`);
+    const chunkPreviews = chunks.map((chunk) => chunk.preview);
     const graphResult = await buildGraphForDocument(
       documentId,
       originalName,
@@ -233,11 +249,11 @@ export async function ingestFile(
       metadata.entities,
       chunkIds,
       chunkPreviews,
-      vaultId, // pass vaultId to graph builder
-      onProgress
+      vaultId,
+      onProgress,
+      graphNodeProperties
     );
 
-    // 8. Update document with metadata
     updateDocument(documentId, {
       contentType: metadata.contentType,
       summary: metadata.summary,
@@ -261,6 +277,65 @@ export async function ingestFile(
     };
   } catch (error) {
     console.error("Ingestion failed:", error);
+    try {
+      updateDocument(documentId, { status: "error" });
+    } catch {
+      // ignore
+    }
+
+    return {
+      documentId,
+      filename: originalName,
+      chunkCount: 0,
+      status: "error",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Main ingestion pipeline
+ * 1. Save file to disk
+ * 2. Chunk content
+ * 3. Generate metadata with AI
+ * 4. Embed each chunk (PARALLEL)
+ * 5. Store vectors + metadata
+ */
+export async function ingestFile(
+  fileBuffer: Buffer,
+  originalName: string,
+  mimeType: string,
+  vaultId?: string,
+  onProgress?: (step: string) => void
+): Promise<IngestResult> {
+  const documentId = uuidv4();
+  const ext = path.extname(originalName) || "";
+  const filename = `${documentId}${ext}`;
+  const filePath = path.join(UPLOADS_DIR, filename);
+
+  try {
+    // 1. Save file
+    onProgress?.("Saving file...");
+    fs.writeFileSync(filePath, fileBuffer);
+
+    // 2. Chunk content
+    onProgress?.("Analyzing content structure...");
+    const contentForChunking =
+      mimeType.startsWith("text/") || mimeType === "text/plain" || mimeType === "text/markdown"
+        ? fileBuffer.toString("utf-8")
+        : fileBuffer;
+    const chunks = await chunkContent(contentForChunking, mimeType, originalName, filePath);
+    return await ingestPreparedDocument({
+      documentId,
+      originalName,
+      mimeType,
+      fileSize: fileBuffer.length,
+      chunks,
+      vaultId,
+      onProgress,
+    });
+  } catch (error) {
+    console.error("Ingestion failed:", error);
     // Update document status to error
     try {
       updateDocument(documentId, { status: "error" });
@@ -274,4 +349,32 @@ export async function ingestFile(
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+export async function ingestPreparedTextDocument(options: {
+  originalName: string;
+  mimeType: string;
+  content: string;
+  chunks: Array<{
+    content: string | Buffer;
+    mimeType: string;
+    preview: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  vaultId?: string;
+  onProgress?: (step: string) => void;
+  fileExtension?: string;
+  graphNodeProperties?: Record<string, unknown>;
+}): Promise<IngestResult> {
+  return ingestPreparedDocument({
+    originalName: options.originalName,
+    mimeType: options.mimeType,
+    fileSize: Buffer.byteLength(options.content, "utf-8"),
+    chunks: options.chunks,
+    vaultId: options.vaultId,
+    onProgress: options.onProgress,
+    storedContent: options.content,
+    fileExtension: options.fileExtension,
+    graphNodeProperties: options.graphNodeProperties,
+  });
 }

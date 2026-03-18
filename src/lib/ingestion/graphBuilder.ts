@@ -34,7 +34,8 @@ export function buildStructuralGraph(
   entities: string[],
   chunkIds: string[],
   chunkPreviews: string[],
-  vaultId?: string
+  vaultId?: string,
+  additionalProperties?: Record<string, unknown>
 ): { docNodeId: string; chunkNodeIds: string[] } {
   // Determine node type from mime
   let nodeType: GraphNode["type"] = "document";
@@ -46,7 +47,7 @@ export function buildStructuralGraph(
     id: documentId,
     type: nodeType,
     label: originalName,
-    properties: { mimeType, summary, tags, entities, chunkCount: chunkIds.length },
+    properties: { mimeType, summary, tags, entities, chunkCount: chunkIds.length, ...(additionalProperties || {}) },
     vault_id: vaultId || null,
     embedding_id: null,
   });
@@ -414,7 +415,8 @@ export async function buildGraphForDocument(
   chunkIds: string[],
   chunkPreviews: string[],
   vaultId?: string,
-  onProgress?: (step: string) => void
+  onProgress?: (step: string) => void,
+  additionalProperties?: Record<string, unknown>
 ): Promise<GraphBuildResult> {
   let totalEdges = 0;
   const allInsights: string[] = [];
@@ -430,7 +432,8 @@ export async function buildGraphForDocument(
     entities,
     chunkIds,
     chunkPreviews,
-    vaultId
+    vaultId,
+    additionalProperties
   );
   // Count structural edges: contains + next_chunk + belongs_to
   totalEdges += chunkIds.length + Math.max(0, chunkIds.length - 1) + (vaultId ? 1 : 0);

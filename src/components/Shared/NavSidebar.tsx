@@ -148,10 +148,10 @@ export const NavSidebar = ({ className, nodeCount, isOpen = true, onToggle }: Na
                     compact={compact}
                 />
                 <NavItem
-                    href="/dashboard"
+                    href="/vaults"
                     icon={HardDrive}
                     label="Knowledge Vault"
-                    isActive={false}
+                    isActive={pathname === '/vaults'}
                     badge={nodeCount ?? '—'}
                     compact={compact}
                 />

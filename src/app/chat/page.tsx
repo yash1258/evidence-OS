@@ -12,7 +12,8 @@ import {
     FileText,
     Send,
     Paperclip,
-    Database
+    Database,
+    Link2
 } from 'lucide-react';
 
 import { FileIcon } from '@/components/Shared/FileIcon';
@@ -20,6 +21,7 @@ import { DynamicThinkingState } from '@/components/Shared/DynamicThinkingState';
 import { AgentReasoningBlock } from '@/components/Shared/AgentReasoningBlock';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
 import { ContextSidebar } from '@/components/Shared/ContextSidebar';
+import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
 
 // --- TYPES ---
 
@@ -181,6 +183,10 @@ export default function ChatPage() {
     const [activeVaultId, setActiveVaultId] = useState('global');
     const [activeVaultGuidance, setActiveVaultGuidance] = useState<VaultGuidance | null>(null);
     const [graphStats, setGraphStats] = useState<{ nodeCount: number } | null>(null);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importUrl, setImportUrl] = useState("");
+    const [isImportingUrl, setIsImportingUrl] = useState(false);
+    const [importError, setImportError] = useState("");
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -343,6 +349,38 @@ export default function ChatPage() {
             await fetchData(); // Refresh file list and stats
         } catch (err) {
             console.error('Upload error:', err);
+        }
+    };
+
+    const handleYouTubeImport = async () => {
+        if (!importUrl.trim()) return;
+
+        setIsImportingUrl(true);
+        setImportError("");
+
+        try {
+            const res = await fetch('/api/import/youtube', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: importUrl.trim(),
+                    ...(activeVaultId !== 'global' ? { vaultId: activeVaultId } : {}),
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'YouTube import failed');
+            }
+
+            setIsImportModalOpen(false);
+            setImportUrl("");
+            await fetchData();
+            await submitMessage(`Summarize the imported YouTube transcript "${data.filename}" and explain how it fits into this vault.`);
+        } catch (err) {
+            setImportError(err instanceof Error ? err.message : 'YouTube import failed');
+        } finally {
+            setIsImportingUrl(false);
         }
     };
 
@@ -518,6 +556,10 @@ export default function ChatPage() {
                     router.push('/investigations');
                 }}
                 onUploadClick={() => fileInputRef.current?.click()}
+                onImportUrlClick={() => {
+                    setImportError("");
+                    setIsImportModalOpen(true);
+                }}
                 onSettingsClick={() => router.push('/settings')}
                 onOpenFile={(file) => {
                     if (file.documentId) {
@@ -697,6 +739,16 @@ export default function ChatPage() {
                                     >
                                         <Paperclip size={18} />
                                     </button>
+                                    <button
+                                        onClick={() => {
+                                            setImportError("");
+                                            setIsImportModalOpen(true);
+                                        }}
+                                        className="p-2 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                                        title="Import YouTube URL"
+                                    >
+                                        <Link2 size={18} />
+                                    </button>
                                     <div className="h-4 w-px bg-zinc-200 mx-1" />
                                     <button
                                         onClick={() => runSuggestedPrompt(inputValue.trim()
@@ -788,6 +840,19 @@ export default function ChatPage() {
                     </motion.aside>
                 )}
             </AnimatePresence>
+
+            <YouTubeImportModal
+                isOpen={isImportModalOpen}
+                value={importUrl}
+                isImporting={isImportingUrl}
+                error={importError}
+                onChange={setImportUrl}
+                onClose={() => {
+                    setIsImportModalOpen(false);
+                    setImportError("");
+                }}
+                onSubmit={handleYouTubeImport}
+            />
         </div>
     );
 }

@@ -28,6 +28,10 @@ The current direction should be:
 
 ### Navigation
 
+- `NavSidebar > Knowledge Vault`
+  - Current: routed to `/dashboard`, redundant with `Home`
+  - Desired: route to a dedicated vault command center page
+
 - `NavSidebar > Graph Explorer`
   - Current: placeholder
   - Desired: route to a live graph explorer page
@@ -132,6 +136,7 @@ Any new live page should:
 - dedicated investigations/history screen
 - file-centric actions in the context sidebar
 - richer graph neighborhood exploration
+- dedicated knowledge vault command center
 
 ### Tranche 3
 

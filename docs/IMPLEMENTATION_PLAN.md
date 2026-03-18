@@ -428,3 +428,52 @@ The immediate next coding tranche should be Sprint 1:
 - regression fixture vaults
 
 That is the highest-leverage investment available.
+
+
+## 13. Starter Wedge: Learning Vaults
+
+One strong early product wedge is a "Learning Vault" workflow.
+
+Example:
+
+- a user creates a vault for "context graphs"
+- adds papers, notes, screenshots, and transcripts
+- asks for topic summaries, concept comparisons, and study prompts
+
+Why this matters:
+
+- it matches the multimodal nature of the product
+- it is usable by students, researchers, and self-directed learners
+- it stresses vault-level understanding more than one-off file chat
+- it creates a clear demonstration of the product vision
+
+This track is defined in [LEARNING_VAULT.md](D:/Agents/gemini-embed-2/evidence-os/docs/LEARNING_VAULT.md).
+
+Recommended near-term implementation order for this wedge:
+
+1. add learning-oriented starter prompts and vault affordances
+2. improve overview generation for concept-heavy corpora
+3. add lightweight note and pasted-transcript capture
+4. add YouTube/article URL ingestion after the local/manual path is solid
+
+
+## 14. Product Surface: Knowledge Vault Command Center
+
+`Knowledge Vault` should become a dedicated operational surface, not a second route to the dashboard.
+
+This page should serve as the control center for:
+
+- vault registry
+- vault state and freshness
+- source management
+- quick open actions into chat, graph, and contradictions
+
+This track is defined in [KNOWLEDGE_VAULT.md](D:/Agents/gemini-embed-2/evidence-os/docs/KNOWLEDGE_VAULT.md).
+
+Recommended implementation order:
+
+1. add dedicated `/vaults` route
+2. move the nav item away from `/dashboard`
+3. show live vault cards with health and overview state
+4. add selected-vault source browser
+5. add rename/delete/refresh actions

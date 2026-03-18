@@ -1,15 +1,39 @@
 import { ChromaClient, Collection } from "chromadb";
 
 const COLLECTION_NAME = "evidence_os";
+const DEFAULT_CHROMA_URL = "http://localhost:8000";
 
 let client: ChromaClient | null = null;
 let collection: Collection | null = null;
 
+function getChromaUrl(): string {
+  return process.env.CHROMA_URL || DEFAULT_CHROMA_URL;
+}
+
+function getChromaConnectionConfig(): { host: string; port: number; ssl: boolean } {
+  const rawUrl = getChromaUrl();
+
+  try {
+    const url = new URL(rawUrl);
+    return {
+      host: url.hostname,
+      port: Number(url.port || (url.protocol === "https:" ? 443 : 80)),
+      ssl: url.protocol === "https:",
+    };
+  } catch {
+    throw new Error(`Invalid CHROMA_URL: ${rawUrl}`);
+  }
+}
+
+function formatChromaTarget(): string {
+  const { host, port, ssl } = getChromaConnectionConfig();
+  return `${ssl ? "https" : "http"}://${host}:${port}`;
+}
+
 function getClient(): ChromaClient {
   if (!client) {
-    client = new ChromaClient({
-      path: process.env.CHROMA_URL || "http://localhost:8000",
-    });
+    const config = getChromaConnectionConfig();
+    client = new ChromaClient(config);
   }
   return client;
 }
@@ -17,12 +41,17 @@ function getClient(): ChromaClient {
 export async function getCollection(): Promise<Collection> {
   if (!collection) {
     const chromaClient = getClient();
-    collection = await chromaClient.getOrCreateCollection({
-      name: COLLECTION_NAME,
-      metadata: { "hnsw:space": "cosine" },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      embeddingFunction: { generate: () => [] } as any,
-    });
+    try {
+      collection = await chromaClient.getOrCreateCollection({
+        name: COLLECTION_NAME,
+        metadata: { "hnsw:space": "cosine" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        embeddingFunction: { generate: () => [] } as any,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown Chroma error";
+      throw new Error(`Chroma is unavailable at ${formatChromaTarget()}. Start the server or update CHROMA_URL. ${detail}`);
+    }
   }
   return collection;
 }
@@ -94,4 +123,21 @@ export async function deleteByDocumentId(documentId: string): Promise<void> {
   await col.delete({
     where: { documentId },
   });
+}
+
+export async function getChromaHealth(): Promise<{ connected: boolean; target: string; error?: string }> {
+  try {
+    const chromaClient = getClient();
+    await chromaClient.version();
+    return {
+      connected: true,
+      target: formatChromaTarget(),
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      target: formatChromaTarget(),
+      error: error instanceof Error ? error.message : "Unknown Chroma error",
+    };
+  }
 }

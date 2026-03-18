@@ -21,12 +21,22 @@ const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 function buildLocationLabel(metadata: Record<string, string | number | boolean>): string | undefined {
   const pageStart = typeof metadata.pageStart === "number" ? metadata.pageStart : undefined;
   const pageEnd = typeof metadata.pageEnd === "number" ? metadata.pageEnd : undefined;
+  const documentPageCount = typeof metadata.documentPageCount === "number" ? metadata.documentPageCount : undefined;
+  const windowNumber = typeof metadata.windowNumber === "number" ? metadata.windowNumber : undefined;
+  const windowCount = typeof metadata.windowCount === "number" ? metadata.windowCount : undefined;
   const startSeconds = typeof metadata.startSeconds === "number" ? metadata.startSeconds : undefined;
   const endSeconds = typeof metadata.endSeconds === "number" ? metadata.endSeconds : undefined;
   const chunkIndex = typeof metadata.chunkIndex === "number" ? metadata.chunkIndex : undefined;
 
   if (pageStart !== undefined) {
-    return pageEnd !== undefined && pageEnd !== pageStart ? `Pages ${pageStart}-${pageEnd}` : `Page ${pageStart}`;
+    const pageLabel = pageEnd !== undefined && pageEnd !== pageStart ? `Pages ${pageStart}-${pageEnd}` : `Page ${pageStart}`;
+    if (windowCount !== undefined && windowCount > 1 && windowNumber !== undefined && documentPageCount !== undefined) {
+      return `Part ${windowNumber}/${windowCount} · ${pageLabel} of ${documentPageCount}`;
+    }
+    if (documentPageCount !== undefined) {
+      return `${pageLabel} of ${documentPageCount}`;
+    }
+    return pageLabel;
   }
 
   if (startSeconds !== undefined) {

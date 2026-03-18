@@ -30,6 +30,40 @@ What improved:
 - work is being executed against a written strategy, not ad hoc
 
 
+### Learning vault product track
+
+- pending commit in current branch
+
+What improved:
+
+- the repo now defines a concrete starter wedge for topic-learning vaults
+- the "Context Graphs" use case is now translated into product surfaces, agent behaviors, and implementation phases
+- the implementation plan now has a clear path for a learning-oriented entry point instead of only generic vaults
+
+
+### Knowledge vault command center track
+
+- pending commit in current branch
+
+What improved:
+
+- the repo now defines `Knowledge Vault` as a dedicated command-center surface instead of a duplicate dashboard route
+- the intended role, structure, signals, and actions for vault management are now explicit
+- the implementation plan and UI audit now have a concrete path for replacing the redundant nav behavior
+
+
+### YouTube transcript import
+
+- pending commit in current branch
+
+What improved:
+
+- the app can now import YouTube videos as transcript-backed vault documents
+- transcript segments are chunked by time range and flow into the existing embedding, graph, and overview pipeline
+- dashboard, chat, and the context sidebar now expose a live URL import entry point instead of requiring manual transcript copy-paste
+- imported YouTube documents now carry source context into the document inspector
+
+
 ### App stabilization
 
 - `53d2134` Implement vault overview and stabilize app workflows
@@ -256,3 +290,15 @@ Current context refinement:
 Current analysis refinement:
 
 - make contradictions and document structure inspectable as first-class surfaces
+
+Current product wedge refinement:
+
+- define a high-signal "Learning Vault" flow for topic mastery across mixed sources
+
+Current source-ingestion refinement:
+
+- turn YouTube videos into first-class transcript documents for learning vaults
+
+Current management-surface refinement:
+
+- define the dedicated vault command center before building the route

@@ -7,6 +7,7 @@ import { insertNode, insertEdge } from "@/lib/storage/database";
 
 const MAX_ITERATIONS = 10;
 const LOCAL_STREAM_CHUNK_SIZE = 18;
+const MAX_IDENTICAL_TOOL_CALLS = 2;
 
 export interface AgentSource {
   documentId?: string;
@@ -116,6 +117,64 @@ export interface AgentResult {
   sources: AgentSource[];
 }
 
+function streamLocally(text: string, onToken?: (token: string) => void): void {
+  if (!onToken) return;
+  for (let index = 0; index < text.length; index += LOCAL_STREAM_CHUNK_SIZE) {
+    onToken(text.slice(index, index + LOCAL_STREAM_CHUNK_SIZE));
+  }
+}
+
+async function synthesizeFinalAnswer(
+  userMessage: string,
+  messages: LLMMessage[],
+  thinkingSteps: ThinkingStep[],
+  onToken?: (token: string) => void
+): Promise<string | null> {
+  try {
+    const synthesisPrompt = `${SYSTEM_PROMPT}
+
+You already have tool results in the conversation.
+- Answer the user's original request now using only the evidence already gathered.
+- Do not call any tools.
+- If the gathered evidence is partial, say so plainly and still provide the best grounded answer.
+- Include source citations at the end using filenames when available.
+`;
+
+    const response = await withFallback((provider) =>
+      provider.generateContent(
+        [
+          ...messages,
+          {
+            role: "user",
+            content: `Using only the gathered tool results, answer this original request directly without calling tools: ${userMessage}`,
+          },
+        ],
+        synthesisPrompt
+      )
+    );
+
+    if (!response.text) {
+      return null;
+    }
+
+    const synthesizedAnswer = response.text.trim();
+    if (!synthesizedAnswer) {
+      return null;
+    }
+
+    const finalStep: ThinkingStep = {
+      type: "thinking",
+      thought: "Synthesized final answer from collected tool results to close the investigation.",
+      timestamp: Date.now(),
+    };
+    thinkingSteps.push(finalStep);
+    streamLocally(synthesizedAnswer, onToken);
+    return synthesizedAnswer;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * ReAct Agent Loop
  *
@@ -135,6 +194,7 @@ export async function runAgentLoop(
 ): Promise<AgentResult> {
   const thinkingSteps: ThinkingStep[] = [];
   const sourcesMap = new Map<string, AgentSource>();
+  const toolCallCounts = new Map<string, number>();
 
   // Build conversation messages
   const messages: LLMMessage[] = [
@@ -164,6 +224,8 @@ export async function runAgentLoop(
 
     // Check if we have function calls
     if (response.functionCalls && response.functionCalls.length > 0) {
+      let shouldForceSynthesis = false;
+
       // Preserve the full model response so Gemini function-calling can continue.
       const rawParts = getRawResponseParts(response.raw);
       if (rawParts) {
@@ -182,6 +244,19 @@ export async function runAgentLoop(
       }
 
       for (const fc of response.functionCalls) {
+        const normalizedSignature = JSON.stringify({
+          name: fc.name,
+          args: fc.args,
+          vaultId: vaultId || null,
+        });
+        const nextCallCount = (toolCallCounts.get(normalizedSignature) || 0) + 1;
+        toolCallCounts.set(normalizedSignature, nextCallCount);
+
+        if (nextCallCount > MAX_IDENTICAL_TOOL_CALLS) {
+          shouldForceSynthesis = true;
+          continue;
+        }
+
         // Record the tool call step
         const callStep: ThinkingStep = {
           type: "tool_call",
@@ -278,17 +353,26 @@ export async function runAgentLoop(
         });
       }
 
+      if (shouldForceSynthesis && thinkingSteps.length > 0) {
+        const synthesizedAnswer = await synthesizeFinalAnswer(userMessage, messages, thinkingSteps, onToken);
+        if (synthesizedAnswer) {
+          const sources = Array.from(sourcesMap.values());
+          saveInvestigationNode(userMessage, synthesizedAnswer, sources, thinkingSteps);
+          return {
+            answer: synthesizedAnswer,
+            thinkingSteps,
+            sources,
+          };
+        }
+      }
+
       // Continue the loop - let the model process tool results
       continue;
     }
 
     // No function calls - this is the final text response
     if (response.text) {
-      if (onToken) {
-        for (let index = 0; index < response.text.length; index += LOCAL_STREAM_CHUNK_SIZE) {
-          onToken(response.text.slice(index, index + LOCAL_STREAM_CHUNK_SIZE));
-        }
-      }
+      streamLocally(response.text, onToken);
 
       // Extract any source citations from the response text
       const sourcePattern = /\[([^\]]+\.[a-z]+)\]/gi;
@@ -316,6 +400,19 @@ export async function runAgentLoop(
   }
 
   // If we hit max iterations
+  const synthesizedAnswer = thinkingSteps.length > 0
+    ? await synthesizeFinalAnswer(userMessage, messages, thinkingSteps, onToken)
+    : null;
+  if (synthesizedAnswer) {
+    const sources = Array.from(sourcesMap.values());
+    saveInvestigationNode(userMessage, synthesizedAnswer, sources, thinkingSteps);
+    return {
+      answer: synthesizedAnswer,
+      thinkingSteps,
+      sources,
+    };
+  }
+
   return {
     answer:
       "I reached the maximum number of reasoning steps. Here's what I found so far based on my research into your knowledge base.",

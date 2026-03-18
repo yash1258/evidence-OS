@@ -28,6 +28,7 @@ interface DocumentRecord {
 
 interface DocumentPayload {
     document: DocumentRecord;
+    nodeProperties?: Record<string, unknown>;
     fullContent: string | null;
     chunks: ChunkRecord[];
 }
@@ -35,11 +36,21 @@ interface DocumentPayload {
 function formatChunkLabel(chunk: ChunkRecord): string {
     const pageStart = typeof chunk.metadata?.pageStart === "number" ? chunk.metadata.pageStart : undefined;
     const pageEnd = typeof chunk.metadata?.pageEnd === "number" ? chunk.metadata.pageEnd : undefined;
+    const documentPageCount = typeof chunk.metadata?.documentPageCount === "number" ? chunk.metadata.documentPageCount : undefined;
+    const windowNumber = typeof chunk.metadata?.windowNumber === "number" ? chunk.metadata.windowNumber : undefined;
+    const windowCount = typeof chunk.metadata?.windowCount === "number" ? chunk.metadata.windowCount : undefined;
     const startSeconds = typeof chunk.metadata?.startSeconds === "number" ? chunk.metadata.startSeconds : undefined;
     const endSeconds = typeof chunk.metadata?.endSeconds === "number" ? chunk.metadata.endSeconds : undefined;
 
     if (pageStart !== undefined) {
-        return pageEnd !== undefined && pageEnd !== pageStart ? `Pages ${pageStart}-${pageEnd}` : `Page ${pageStart}`;
+        const pageLabel = pageEnd !== undefined && pageEnd !== pageStart ? `Pages ${pageStart}-${pageEnd}` : `Page ${pageStart}`;
+        if (windowCount !== undefined && windowCount > 1 && windowNumber !== undefined && documentPageCount !== undefined) {
+            return `Part ${windowNumber}/${windowCount} · ${pageLabel} of ${documentPageCount}`;
+        }
+        if (documentPageCount !== undefined) {
+            return `${pageLabel} of ${documentPageCount}`;
+        }
+        return pageLabel;
     }
     if (startSeconds !== undefined) {
         const formatTime = (totalSeconds: number) => {
@@ -78,6 +89,9 @@ export default function DocumentInspectorPage() {
 
     const document = payload?.document;
     const chunks = payload?.chunks || [];
+    const sourceUrl = typeof payload?.nodeProperties?.sourceUrl === "string" ? payload.nodeProperties.sourceUrl : "";
+    const sourceChannel = typeof payload?.nodeProperties?.channel === "string" ? payload.nodeProperties.channel : "";
+    const sourceType = typeof payload?.nodeProperties?.sourceType === "string" ? payload.nodeProperties.sourceType : "";
     const buildAskParams = () => {
         const search = new URLSearchParams();
         if (document?.vault_id) {
@@ -163,6 +177,42 @@ export default function DocumentInspectorPage() {
                                     <div className="mt-3 text-sm font-semibold text-zinc-900">{document.uploadedAt}</div>
                                 </div>
                             </div>
+
+                            {(sourceUrl || sourceChannel || sourceType) && (
+                                <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Network size={16} className="text-orange-500" />
+                                        <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Source Context</h2>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {sourceType && (
+                                            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                                                <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Source Type</div>
+                                                <div className="mt-3 text-sm font-semibold text-zinc-900">{sourceType}</div>
+                                            </div>
+                                        )}
+                                        {sourceChannel && (
+                                            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                                                <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Channel</div>
+                                                <div className="mt-3 text-sm font-semibold text-zinc-900">{sourceChannel}</div>
+                                            </div>
+                                        )}
+                                        {sourceUrl && (
+                                            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                                                <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Source URL</div>
+                                                <a
+                                                    href={sourceUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="mt-3 block truncate text-sm font-semibold text-orange-700 hover:text-orange-800"
+                                                >
+                                                    {sourceUrl}
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 lg:grid-cols-[0.92fr_1.08fr] gap-6">
                                 <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm">

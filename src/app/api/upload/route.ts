@@ -47,9 +47,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (result.status === "error") {
+      const isVectorStoreUnavailable = typeof result.error === "string" && result.error.includes("Chroma is unavailable");
       return NextResponse.json(
         { error: result.error || "Ingestion failed" },
-        { status: 500 }
+        { status: isVectorStoreUnavailable ? 503 : 500 }
       );
     }
 

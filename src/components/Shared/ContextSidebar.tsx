@@ -27,6 +27,7 @@ interface ContextSidebarProps {
     vaultFiles: VaultFile[];
     onNewInvestigation?: () => void;
     onUploadClick?: () => void;
+    onImportUrlClick?: () => void;
     onSettingsClick?: () => void;
     onOpenFile?: (file: VaultFile) => void;
     onInvestigateFile?: (file: VaultFile) => void;
@@ -39,6 +40,7 @@ export const ContextSidebar = ({
     vaultFiles, 
     onNewInvestigation, 
     onUploadClick,
+    onImportUrlClick,
     onSettingsClick,
     onOpenFile,
     onInvestigateFile,
@@ -80,15 +82,28 @@ export const ContextSidebar = ({
                         </span>
                     </div>
 
-                    <div 
-                        onClick={onUploadClick}
-                        className="border border-dashed border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-colors cursor-pointer group mb-2"
-                    >
-                        <Database size={20} className="text-zinc-600 group-hover:text-orange-500 transition-colors" />
-                        <div className="text-center">
-                            <p className="text-xs text-zinc-400 font-medium">Drop files to embed</p>
-                            <p className="text-[10px] text-zinc-600 font-mono mt-0.5">PDF, Audio, Images</p>
+                    <div className="mb-2 grid grid-cols-2 gap-2">
+                        <div 
+                            onClick={onUploadClick}
+                            className="border border-dashed border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-colors cursor-pointer group"
+                        >
+                            <Database size={20} className="text-zinc-600 group-hover:text-orange-500 transition-colors" />
+                            <div className="text-center">
+                                <p className="text-xs text-zinc-400 font-medium">Upload File</p>
+                                <p className="text-[10px] text-zinc-600 font-mono mt-0.5">PDF, Audio, Images</p>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={onImportUrlClick}
+                            className="border border-dashed border-zinc-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 transition-colors cursor-pointer group text-left"
+                        >
+                            <ArrowUpRight size={20} className="text-zinc-600 group-hover:text-orange-500 transition-colors" />
+                            <div className="text-center">
+                                <p className="text-xs text-zinc-400 font-medium">Import URL</p>
+                                <p className="text-[10px] text-zinc-600 font-mono mt-0.5">YouTube</p>
+                            </div>
+                        </button>
                     </div>
 
                     <div className="flex flex-col gap-0.5">
