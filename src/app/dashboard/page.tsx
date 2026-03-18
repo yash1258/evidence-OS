@@ -26,7 +26,9 @@ import {
 
 import { MagneticButton } from '@/components/Shared/MagneticButton';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
+import { ToastStack, useToastStack } from '@/components/Shared/ToastStack';
 import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
+import { getNoticeFromError } from '@/lib/ui/errorNotice';
 
 // --- TYPES ---
 
@@ -98,6 +100,13 @@ export default function Dashboard() {
     const [importError, setImportError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const { toasts, pushToast, dismissToast } = useToastStack();
+
+    const notifyError = useCallback((error: unknown, fallbackTitle: string) => {
+        const notice = getNoticeFromError(error, fallbackTitle);
+        pushToast({ ...notice, tone: 'error' });
+        return notice;
+    }, [pushToast]);
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -110,10 +119,11 @@ export default function Dashboard() {
             }
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
+            notifyError(err, 'Sync failed');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [notifyError]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -141,14 +151,16 @@ export default function Dashboard() {
                 body: JSON.stringify({ name: newVaultName.trim() }),
             });
             const data = await res.json();
-            if (res.ok) {
-                setTargetVaultId(data.id);
-                setNewVaultName('');
-                setIsCreateVaultModalOpen(false);
-                fetchDashboardData();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to create vault');
             }
+            setTargetVaultId(data.id);
+            setNewVaultName('');
+            setIsCreateVaultModalOpen(false);
+            fetchDashboardData();
         } catch (err) {
             console.error('Failed to create vault:', err);
+            notifyError(err, 'Vault creation failed');
         }
     };
 
@@ -174,8 +186,9 @@ export default function Dashboard() {
                 setUploadStatus(null);
             }, 2000);
         } catch (err) {
+            const notice = notifyError(err, 'Upload failed');
             setUploadStatus('error');
-            setUploadError(err instanceof Error ? err.message : 'Upload failed');
+            setUploadError(notice.message);
             setTimeout(() => setUploadStatus(null), 4000);
         }
     };
@@ -215,10 +228,10 @@ export default function Dashboard() {
             fetchDashboardData();
             setTimeout(() => setUploadStatus(null), 2500);
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'YouTube import failed';
-            setImportError(message);
+            const notice = notifyError(err, 'Import failed');
+            setImportError(notice.message);
             setUploadStatus('error');
-            setUploadError(message);
+            setUploadError(notice.message);
             setTimeout(() => setUploadStatus(null), 4000);
         } finally {
             setIsImportingUrl(false);
@@ -690,6 +703,7 @@ export default function Dashboard() {
                 }}
                 onSubmit={handleYouTubeImport}
             />
+            <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 }

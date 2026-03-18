@@ -64,6 +64,35 @@ What improved:
 - imported YouTube documents now carry source context into the document inspector
 
 
+### Modular parallel agent runtime
+
+- pending commit in current branch
+
+What improved:
+
+- broad project-scope prompts can now route through a bounded multi-agent path
+- local tools gather grounded evidence first instead of letting worker models invent retrieval
+- parallel OpenRouter workers now handle:
+  - context mapping
+  - risk / contradiction auditing
+  - next-step planning
+- Gemini remains the orchestrator and final synthesizer
+- the old single-agent loop remains available as fallback
+- settings/system surfaces now expose the active runtime setup
+
+
+### Runtime hardening and observability
+
+- pending commit in current branch
+
+What improved:
+
+- parallel workers now have bounded timeouts
+- chat traces now surface whether a response used the single or parallel path
+- if all workers fail, the app falls back cleanly to the single-agent loop
+- runtime settings now expose the worker timeout alongside the active worker models
+
+
 ### App stabilization
 
 - `53d2134` Implement vault overview and stabilize app workflows

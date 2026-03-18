@@ -2,29 +2,12 @@ import { SYSTEM_PROMPT } from "./systemPrompt";
 import { AGENT_TOOLS } from "./tools";
 import { executeTool } from "./toolImplementations";
 import { withFallback, type LLMMessage, type LLMResponse } from "./providers";
-import { v4 as uuidv4 } from "uuid";
-import { insertNode, insertEdge } from "@/lib/storage/database";
+import { saveInvestigationNode } from "./investigationTracking";
+import type { AgentResult, AgentSource, ThinkingStep } from "./types";
 
 const MAX_ITERATIONS = 10;
 const LOCAL_STREAM_CHUNK_SIZE = 18;
 const MAX_IDENTICAL_TOOL_CALLS = 2;
-
-export interface AgentSource {
-  documentId?: string;
-  chunkId?: string;
-  chunkIndex?: number;
-  filename: string;
-  locationLabel?: string;
-  contentType?: string;
-  mimeType?: string;
-  sourceMimeType?: string;
-  pageStart?: number;
-  pageEnd?: number;
-  startSeconds?: number;
-  endSeconds?: number;
-  preview?: string;
-  content?: string;
-}
 
 function getRawResponseParts(raw: unknown): Array<Record<string, unknown>> | undefined {
   if (!raw || typeof raw !== "object" || !("candidates" in raw)) {
@@ -33,88 +16,6 @@ function getRawResponseParts(raw: unknown): Array<Record<string, unknown>> | und
 
   const candidates = (raw as { candidates?: Array<{ content?: { parts?: Array<Record<string, unknown>> } }> }).candidates;
   return candidates?.[0]?.content?.parts;
-}
-
-/**
- * Save a completed investigation as a graph node.
- * Links the investigation to all documents it referenced via "references" edges.
- * This makes the graph learn from every query.
- */
-function saveInvestigationNode(
-  query: string,
-  answer: string,
-  sources: AgentSource[],
-  thinkingSteps: ThinkingStep[]
-): void {
-  try {
-    const investigationId = `inv_${uuidv4()}`;
-
-    insertNode({
-      id: investigationId,
-      type: "investigation",
-      label: query.substring(0, 100),
-      properties: {
-        query,
-        answerPreview: answer.substring(0, 500),
-        created_at: new Date().toISOString(),
-        sources: sources.map((source) => source.filename),
-        toolsUsed: thinkingSteps
-          .filter((s) => s.type === "tool_call")
-          .map((s) => s.toolName)
-          .filter(Boolean),
-        stepCount: thinkingSteps.length,
-      },
-      vault_id: null,
-      embedding_id: null,
-    });
-
-    // Link investigation to source documents via document IDs found in tool results
-    const docIds = new Set<string>();
-    for (const step of thinkingSteps) {
-      if (step.type === "tool_result" && step.result) {
-        const result = step.result as Record<string, unknown>;
-        // Extract documentId from search results
-        if (result.results && Array.isArray(result.results)) {
-          for (const r of result.results as Array<{ documentId?: string }>) {
-            if (r.documentId) docIds.add(r.documentId);
-          }
-        }
-        // Extract from direct document content retrieval
-        if (result.documentId) docIds.add(result.documentId as string);
-      }
-    }
-
-    for (const docId of docIds) {
-      insertEdge({
-        id: uuidv4(),
-        source_id: investigationId,
-        target_id: docId,
-        type: "references",
-        weight: 1.0,
-        confidence: 1.0,
-        evidence: `Investigation referenced this document`,
-        method: "structural",
-        metadata: { query: query.substring(0, 200) },
-      });
-    }
-  } catch {
-    // Investigation tracking is non-critical — fail silently
-  }
-}
-
-export interface ThinkingStep {
-  type: "tool_call" | "tool_result" | "thinking";
-  toolName?: string;
-  toolArgs?: Record<string, unknown>;
-  result?: unknown;
-  thought?: string;
-  timestamp: number;
-}
-
-export interface AgentResult {
-  answer: string;
-  thinkingSteps: ThinkingStep[];
-  sources: AgentSource[];
 }
 
 function streamLocally(text: string, onToken?: (token: string) => void): void {
@@ -196,7 +97,6 @@ export async function runAgentLoop(
   const sourcesMap = new Map<string, AgentSource>();
   const toolCallCounts = new Map<string, number>();
 
-  // Build conversation messages
   const messages: LLMMessage[] = [
     ...chatHistory,
     { role: "user", content: userMessage },
@@ -207,7 +107,6 @@ export async function runAgentLoop(
   while (iterations < MAX_ITERATIONS) {
     iterations++;
 
-    // Call LLM with tools
     let response: LLMResponse;
     try {
       response = await withFallback((provider) =>
@@ -222,11 +121,9 @@ export async function runAgentLoop(
       };
     }
 
-    // Check if we have function calls
     if (response.functionCalls && response.functionCalls.length > 0) {
       let shouldForceSynthesis = false;
 
-      // Preserve the full model response so Gemini function-calling can continue.
       const rawParts = getRawResponseParts(response.raw);
       if (rawParts) {
         messages.push({
@@ -234,7 +131,6 @@ export async function runAgentLoop(
           parts: rawParts,
         });
       } else {
-        // Fallback: construct parts manually (will work for OpenRouter/non-Gemini)
         messages.push({
           role: "model",
           parts: response.functionCalls.map((fc) => ({
@@ -257,7 +153,6 @@ export async function runAgentLoop(
           continue;
         }
 
-        // Record the tool call step
         const callStep: ThinkingStep = {
           type: "tool_call",
           toolName: fc.name,
@@ -267,11 +162,9 @@ export async function runAgentLoop(
         thinkingSteps.push(callStep);
         onStep?.(callStep);
 
-        // Execute the tool, injecting vaultId into kwargs implicitly
         const toolArgs = { ...fc.args, vaultId };
         const toolResult = await executeTool(fc.name, toolArgs);
 
-        // Track sources from search results
         if (fc.name === "search_knowledge_base" && toolResult.results) {
           const results = toolResult.results as Array<{
             chunkId?: string;
@@ -288,26 +181,28 @@ export async function runAgentLoop(
             endSeconds?: number;
             preview?: string;
           }>;
-          results.forEach((r) => {
-            if (!r.filename) return;
-            const key = r.chunkId || r.documentId || r.filename;
+
+          results.forEach((result) => {
+            if (!result.filename) return;
+            const key = result.chunkId || result.documentId || result.filename;
             sourcesMap.set(key, {
-              chunkId: r.chunkId,
-              chunkIndex: r.chunkIndex,
-              documentId: r.documentId,
-              filename: r.filename,
-              locationLabel: r.locationLabel,
-              contentType: r.contentType,
-              mimeType: r.mimeType,
-              sourceMimeType: r.sourceMimeType,
-              pageStart: typeof r.pageStart === "number" ? r.pageStart : undefined,
-              pageEnd: typeof r.pageEnd === "number" ? r.pageEnd : undefined,
-              startSeconds: typeof r.startSeconds === "number" ? r.startSeconds : undefined,
-              endSeconds: typeof r.endSeconds === "number" ? r.endSeconds : undefined,
-              preview: r.preview,
+              chunkId: result.chunkId,
+              chunkIndex: result.chunkIndex,
+              documentId: result.documentId,
+              filename: result.filename,
+              locationLabel: result.locationLabel,
+              contentType: result.contentType,
+              mimeType: result.mimeType,
+              sourceMimeType: result.sourceMimeType,
+              pageStart: typeof result.pageStart === "number" ? result.pageStart : undefined,
+              pageEnd: typeof result.pageEnd === "number" ? result.pageEnd : undefined,
+              startSeconds: typeof result.startSeconds === "number" ? result.startSeconds : undefined,
+              endSeconds: typeof result.endSeconds === "number" ? result.endSeconds : undefined,
+              preview: result.preview,
             });
           });
         }
+
         if (fc.name === "get_document_content" && toolResult.filename) {
           const toolMetadata = (
             toolResult.metadata &&
@@ -333,7 +228,6 @@ export async function runAgentLoop(
           sourcesMap.set(source.chunkId || source.documentId || source.filename, source);
         }
 
-        // Record the tool result step
         const resultStep: ThinkingStep = {
           type: "tool_result",
           toolName: fc.name,
@@ -343,7 +237,6 @@ export async function runAgentLoop(
         thinkingSteps.push(resultStep);
         onStep?.(resultStep);
 
-        // Add function response to messages
         messages.push({
           role: "function",
           functionResponse: {
@@ -366,15 +259,12 @@ export async function runAgentLoop(
         }
       }
 
-      // Continue the loop - let the model process tool results
       continue;
     }
 
-    // No function calls - this is the final text response
     if (response.text) {
       streamLocally(response.text, onToken);
 
-      // Extract any source citations from the response text
       const sourcePattern = /\[([^\]]+\.[a-z]+)\]/gi;
       let match: RegExpExecArray | null;
       while ((match = sourcePattern.exec(response.text)) !== null) {
@@ -384,7 +274,6 @@ export async function runAgentLoop(
         }
       }
 
-      // Save investigation as a graph node
       const sources = Array.from(sourcesMap.values());
       saveInvestigationNode(userMessage, response.text, sources, thinkingSteps);
 
@@ -395,11 +284,9 @@ export async function runAgentLoop(
       };
     }
 
-    // Safety: if neither function calls nor text, break
     break;
   }
 
-  // If we hit max iterations
   const synthesizedAnswer = thinkingSteps.length > 0
     ? await synthesizeFinalAnswer(userMessage, messages, thinkingSteps, onToken)
     : null;

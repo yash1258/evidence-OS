@@ -477,3 +477,31 @@ Recommended implementation order:
 3. show live vault cards with health and overview state
 4. add selected-vault source browser
 5. add rename/delete/refresh actions
+
+
+## 15. Current Execution Tranche
+
+With the bounded multi-agent runtime now in place, the next tranche should be:
+
+1. runtime hardening and observability
+2. OCR/scanned-document support
+3. vault command-center management actions
+4. evaluation harness for retrieval / contradiction / citation quality
+
+### Immediate Technical Priorities
+
+- add worker timeouts and stronger failure isolation
+- make the active path visible in chat traces and settings
+- persist and inspect worker outputs through investigation history
+- add OCR backend abstraction ahead of scanned-PDF work
+- add query/evidence regression cases for project-scope prompts
+
+### Why This Order
+
+The product now has legitimate agent structure, but the next bottlenecks are:
+
+- runtime predictability
+- evidence quality on difficult inputs
+- visibility into why the system answered the way it did
+
+That means the next investment should tighten reliability and observability before adding broader surface area.

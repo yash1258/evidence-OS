@@ -22,8 +22,10 @@ import {
 } from "lucide-react";
 import { NavSidebar } from "@/components/Shared/NavSidebar";
 import { MagneticButton } from "@/components/Shared/MagneticButton";
+import { ToastStack, useToastStack } from "@/components/Shared/ToastStack";
 import { YouTubeImportModal } from "@/components/Shared/YouTubeImportModal";
 import { FileIcon } from "@/components/Shared/FileIcon";
+import { getNoticeFromError } from "@/lib/ui/errorNotice";
 
 interface VaultSpace {
     id: string;
@@ -93,6 +95,13 @@ export default function VaultsPage() {
     const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "error" | null>(null);
     const [uploadFileName, setUploadFileName] = useState("");
     const [uploadError, setUploadError] = useState("");
+    const { toasts, pushToast, dismissToast } = useToastStack();
+
+    const notifyError = useCallback((error: unknown, fallbackTitle: string) => {
+        const notice = getNoticeFromError(error, fallbackTitle);
+        pushToast({ ...notice, tone: "error" });
+        return notice;
+    }, [pushToast]);
 
     useEffect(() => {
         const stored = window.localStorage.getItem("evidenceos.nav-sidebar-open");
@@ -128,8 +137,11 @@ export default function VaultsPage() {
     }, [selectedVaultId]);
 
     useEffect(() => {
-        fetchVaultData().catch((error) => console.error("Failed to fetch vault data:", error));
-    }, [fetchVaultData]);
+        fetchVaultData().catch((error) => {
+            console.error("Failed to fetch vault data:", error);
+            notifyError(error, "Sync failed");
+        });
+    }, [fetchVaultData, notifyError]);
 
     const filteredSpaces = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -208,6 +220,7 @@ export default function VaultsPage() {
             setSelectedVaultId(data.id);
         } catch (error) {
             console.error("Failed to create vault:", error);
+            notifyError(error, "Vault creation failed");
         }
     };
 
@@ -232,8 +245,9 @@ export default function VaultsPage() {
             await fetchVaultData();
             setTimeout(() => setUploadStatus(null), 2200);
         } catch (error) {
+            const notice = notifyError(error, "Upload failed");
             setUploadStatus("error");
-            setUploadError(error instanceof Error ? error.message : "Upload failed");
+            setUploadError(notice.message);
             setTimeout(() => setUploadStatus(null), 4000);
         }
     };
@@ -263,10 +277,10 @@ export default function VaultsPage() {
             await fetchVaultData();
             setTimeout(() => setUploadStatus(null), 2400);
         } catch (error) {
-            const message = error instanceof Error ? error.message : "YouTube import failed";
-            setImportError(message);
+            const notice = notifyError(error, "Import failed");
+            setImportError(notice.message);
             setUploadStatus("error");
-            setUploadError(message);
+            setUploadError(notice.message);
             setTimeout(() => setUploadStatus(null), 4000);
         } finally {
             setIsImportingUrl(false);
@@ -579,6 +593,7 @@ export default function VaultsPage() {
                 }}
                 onSubmit={handleYouTubeImport}
             />
+            <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 }

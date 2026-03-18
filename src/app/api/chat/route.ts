@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runAgentLoop, type ThinkingStep } from "@/lib/agent/agentLoop";
+import { runInvestigationAgent } from "@/lib/agent/multiAgent";
 import { type LLMMessage } from "@/lib/agent/providers";
+import { type ThinkingStep } from "@/lib/agent/types";
 import { v4 as uuidv4 } from "uuid";
 import {
   createChatSession,
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
         const steps: ThinkingStep[] = [];
 
         try {
-          const result = await runAgentLoop(
+          const result = await runInvestigationAgent(
             message,
             chatHistory,
             vaultId || undefined,

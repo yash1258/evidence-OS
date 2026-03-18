@@ -21,7 +21,9 @@ import { DynamicThinkingState } from '@/components/Shared/DynamicThinkingState';
 import { AgentReasoningBlock } from '@/components/Shared/AgentReasoningBlock';
 import { NavSidebar } from '@/components/Shared/NavSidebar';
 import { ContextSidebar } from '@/components/Shared/ContextSidebar';
+import { ToastStack, useToastStack } from '@/components/Shared/ToastStack';
 import { YouTubeImportModal } from '@/components/Shared/YouTubeImportModal';
+import { getNoticeFromError } from '@/lib/ui/errorNotice';
 
 // --- TYPES ---
 
@@ -187,9 +189,16 @@ export default function ChatPage() {
     const [importUrl, setImportUrl] = useState("");
     const [isImportingUrl, setIsImportingUrl] = useState(false);
     const [importError, setImportError] = useState("");
+    const { toasts, pushToast, dismissToast } = useToastStack();
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const notifyError = useCallback((error: unknown, fallbackTitle: string) => {
+        const notice = getNoticeFromError(error, fallbackTitle);
+        pushToast({ ...notice, tone: 'error' });
+        return notice;
+    }, [pushToast]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -261,8 +270,11 @@ export default function ChatPage() {
                         : [],
                 })));
             })
-            .catch((error) => console.error('Failed to load investigation session:', error));
-    }, [sessionId]);
+            .catch((error) => {
+                console.error('Failed to load investigation session:', error);
+                notifyError(error, 'History unavailable');
+            });
+    }, [sessionId, notifyError]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -320,8 +332,9 @@ export default function ChatPage() {
             }
         } catch (err) {
             console.error('Failed to fetch chat data:', err);
+            notifyError(err, 'Sync failed');
         }
-    }, [activeVaultId]);
+    }, [activeVaultId, notifyError]);
 
     // Fetch actual vault files and vaults
     useEffect(() => {
@@ -344,11 +357,13 @@ export default function ChatPage() {
                 body: formData,
             });
 
-            if (!res.ok) throw new Error('Upload failed');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Upload failed');
             
             await fetchData(); // Refresh file list and stats
         } catch (err) {
             console.error('Upload error:', err);
+            notifyError(err, 'Upload failed');
         }
     };
 
@@ -378,7 +393,8 @@ export default function ChatPage() {
             await fetchData();
             await submitMessage(`Summarize the imported YouTube transcript "${data.filename}" and explain how it fits into this vault.`);
         } catch (err) {
-            setImportError(err instanceof Error ? err.message : 'YouTube import failed');
+            const notice = notifyError(err, 'Import failed');
+            setImportError(notice.message);
         } finally {
             setIsImportingUrl(false);
         }
@@ -479,12 +495,13 @@ export default function ChatPage() {
                         }
 
                         if (parsed.type === 'error') {
+                            const notice = notifyError(parsed.error, 'Agent failed');
                             setMessages(prev => prev.map(msg => msg.id === thinkingId ? {
                                 id: thinkingId,
                                 role: 'agent',
                                 status: 'complete',
                                 reasoning: [],
-                                content: `Error: ${parsed.error}`,
+                                content: `${notice.title}: ${notice.message}`,
                                 citations: [],
                             } : msg));
                         }
@@ -492,12 +509,13 @@ export default function ChatPage() {
                 }
             }
         } catch (err) {
+            const notice = notifyError(err, 'Chat unavailable');
             setMessages(prev => prev.map(msg => msg.id === thinkingId ? {
                 id: thinkingId,
                 role: 'agent',
                 status: 'complete',
                 reasoning: [],
-                content: `Failed to get response: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                content: `${notice.title}: ${notice.message}`,
                 citations: [],
             } : msg));
         }
@@ -853,6 +871,7 @@ export default function ChatPage() {
                 }}
                 onSubmit={handleYouTubeImport}
             />
+            <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 }

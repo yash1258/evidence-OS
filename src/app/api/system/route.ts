@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getGraphStats, listVaults } from "@/lib/storage/database";
 import { getChromaHealth } from "@/lib/storage/vectorStore";
+import { getParallelAgentSummary } from "@/lib/agent/multiAgent";
 
 export async function GET() {
   try {
@@ -14,6 +15,7 @@ export async function GET() {
         fallback: process.env.OPENROUTER_API_KEY ? "openrouter/hunter-alpha" : null,
         embedding: "gemini-embedding-2-preview",
       },
+      agentRuntime: getParallelAgentSummary(),
       services: {
         geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
         openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
